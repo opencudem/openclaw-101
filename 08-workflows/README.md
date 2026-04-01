@@ -28,70 +28,54 @@ Individual features are useful; combined workflows are powerful. This module sho
 
 ## Quick Start
 
-### Simple Workflow
+### Simple Workflow via Chat
 
-```javascript
-// ~/.openclaw/skills/morning-routine/scripts/run.js
-module.exports = {
-  async execute() {
-    // 1. Gather data
-    const weather = await skills.weather.getCurrent();
-    const events = await skills.calendar.getToday();
-    
-    // 2. Process
-    const briefing = {
-      greeting: weather.temp > 20 ? 'Good morning! ☀️' : 'Good morning! 🧥',
-      weather: `${weather.condition}, ${weather.temp}°C`,
-      events: events.length
-    };
-    
-    // 3. Deliver
-    await skills.notify.send({
-      channel: 'telegram',
-      message: `${briefing.greeting}\n\n${briefing.weather}\n\nYou have ${briefing.events} events today.`
-    });
-    
-    // 4. Log
-    await skills.memory.saveNote('daily-briefing', briefing);
-    
-    return 'Briefing sent and logged';
-  }
-};
+Instead of writing JavaScript, use natural language:
+
+```
+User: Send me a morning briefing with weather and today's calendar
+Agent: [Uses weather skill and calendar skill to generate briefing]
+
+User: Schedule this briefing every day at 8 AM
+Agent: [Creates cron job: openclaw cron add --name "morning-brief" --cron "0 8 * * *" --message "Send morning briefing" --announce --channel telegram]
 ```
 
-### Complex Workflow with Branches
+### Complex Workflow with Branches via Chat
 
-```javascript
-// ~/.openclaw/skills/pr-manager/scripts/handle.js
-module.exports = {
-  async handlePRs() {
-    const prs = await skills.github.getPendingReviews();
-    
-    for (const pr of prs) {
-      // Decision branch
-      if (pr.size === 'large') {
-        // Complex PR: request detailed review
-        await skills.notify.send({
-          channel: 'slack',
-          message: `Large PR #${pr.number} needs thorough review: ${pr.url}`
-        });
-      } else if (pr.testsPassing) {
-        // Clean small PR: auto-approve option
-        const approval = await skills.approval.request({
-          message: `Approve small PR #${pr.number}?`,
-          timeout: '1h'
-        });
-        
-        if (approval) {
-          await skills.github.approve(pr.number);
-        }
-      } else {
-        // Failing tests: notify author
-        await skills.github.comment(pr.number, '@' + pr.author + ' Tests are failing');
-      }
-    }
-  }
-};
+Use natural language for conditional logic:
+
+```
+User: Check my GitHub PRs
+Agent: [Lists open PRs with details]
+
+User: For large PRs, send detailed review requests to Slack
+Agent: [Identifies large PRs, notifies Slack channel]
+
+User: For small PRs with passing tests, ask me if I want to approve them
+Agent: [Identifies small clean PRs, sends approval requests to your DMs]
+
+User: For PRs with failing tests, notify the authors
+Agent: [Comments on PRs mentioning authors about test failures]
+```
+
+Or set up automated cron jobs for different PR types:
+
+```bash
+# Large PRs - detailed review (every 2 hours)
+openclaw cron add \
+  --name "large-pr-review" \
+  --cron "0 */2 * * 1-5" \
+  --message "Find large PRs and request thorough reviews" \
+  --announce \
+  --channel slack
+
+# Small clean PRs - approval queue (every hour)
+openclaw cron add \
+  --name "small-pr-approval" \
+  --cron "0 * * * 1-5" \
+  --message "Find small PRs with passing tests and queue for approval" \
+  --announce \
+  --channel telegram
 ```
 
 ## Copy-paste examples
@@ -141,62 +125,72 @@ module.exports = {
   },
   
   async log(result) {
-    await skills.memory.saveNote('workflow-log', {
-      timestamp: new Date().toISOString(),
-      result
-    });
+    // Log to file instead of invented skills.memory
+    const fs = require('fs').promises;
+    await fs.appendFile(
+      '/tmp/workflow.log',
+      `${new Date().toISOString()}: ${JSON.stringify(result)}\n`
+    );
   },
   
   async handleError(error) {
-    await skills.notify.send({
-      channel: 'telegram',
-      message: `⚠️ Workflow failed: ${error.message}`
-    });
+    // Use exec to send notification via openclaw CLI
+    const { execSync } = require('child_process');
+    execSync(`openclaw channels send --channel telegram --message "Workflow failed: ${error.message}"`);
   }
 };
 ```
 
-### Multi-channel workflow
+### Multi-channel workflow via cron and chat
 
-```javascript
-// ~/.openclaw/skills/alert-system/scripts/escalate.js
-module.exports = {
-  async escalate({ severity, message, details }) {
-    const channels = {
-      low: ['telegram'],
-      medium: ['telegram', 'email'],
-      high: ['telegram', 'email', 'slack', 'sms']
-    };
-    
-    const targets = channels[severity] || channels.low;
-    
-    for (const channel of targets) {
-      await skills.notify.send({
-        channel,
-        message: `[${severity.toUpperCase()}] ${message}`,
-        details
-      });
-    }
-  }
-};
+Set up escalation via cron jobs:
+
+```bash
+# Low severity - Telegram only
+openclaw cron add \
+  --name "alert-low" \
+  --cron "0 * * * *" \
+  --message "Check low priority alerts and notify via telegram" \
+  --announce \
+  --channel telegram
+
+# High severity - Multiple channels  
+openclaw cron add \
+  --name "alert-high" \
+  --cron "*/15 * * * *" \
+  --message "Check high priority alerts and notify via telegram, email, and slack" \
+  --announce \
+  --channel telegram
 ```
 
 ### Scheduled workflow with cron
 
-```yaml
-# ~/.openclaw/cron.yaml
-jobs:
-  morning-routine:
-    schedule: "0 8 * * *"
-    command: "run skill morning-routine"
-    
-  pr-check:
-    schedule: "0 9,14 * * 1-5"
-    command: "run skill pr-manager"
-    
-  weekly-report:
-    schedule: "0 17 * * 5"
-    command: "run skill weekly-summary"
+Use `openclaw cron add` with descriptive messages:
+
+```bash
+# Morning briefing at 8 AM daily
+openclaw cron add \
+  --name "morning-routine" \
+  --cron "0 8 * * *" \
+  --message "Generate and send morning briefing with weather and calendar" \
+  --announce \
+  --channel telegram
+
+# PR check at 9 AM and 2 PM on weekdays
+openclaw cron add \
+  --name "pr-check" \
+  --cron "0 9,14 * * 1-5" \
+  --message "Check pending GitHub PRs and send summary" \
+  --announce \
+  --channel slack
+
+# Weekly report on Fridays at 5 PM
+openclaw cron add \
+  --name "weekly-report" \
+  --cron "0 17 * * 5" \
+  --message "Generate weekly activity summary" \
+  --announce \
+  --channel email
 ```
 
 ## Flagship Workflows
@@ -235,42 +229,62 @@ jobs:
 
 ### Workflow composition
 
-```javascript
-// Chain workflows together
-module.exports = {
-  async masterWorkflow() {
-    const step1 = await skills.workflow1.execute();
-    if (!step1.success) return step1;
-    
-    const step2 = await skills.workflow2.execute(step1.result);
-    if (!step2.success) return step2;
-    
-    return skills.workflow3.execute(step2.result);
-  }
-};
+Chain multiple cron jobs or chat commands:
+
+```
+User: Run the morning briefing, then check my emails, then summarize my calendar
+Agent: [Executes each workflow in sequence, passing context between steps]
 ```
 
-### Dynamic workflow
+Or create dependent cron jobs with delays:
 
-```javascript
-// Build workflow based on context
-module.exports = {
-  async dynamicWorkflow(context) {
-    const steps = [];
-    
-    if (context.needsResearch) {
-      steps.push(skills.research.gather);
-    }
-    
-    if (context.needsApproval) {
-      steps.push(skills.approval.request);
-    }
-    
-    for (const step of steps) {
-      await step(context);
-    }
-  }
-};
+```bash
+# Step 1: Morning briefing at 8 AM
+openclaw cron add \
+  --name "step1-briefing" \
+  --cron "0 8 * * *" \
+  --message "Generate morning briefing" \
+  --announce \
+  --channel telegram
+
+# Step 2: Email check at 8:05 AM (5 min after briefing)
+openclaw cron add \
+  --name "step2-email" \
+  --cron "5 8 * * *" \
+  --message "Check and summarize emails" \
+  --announce \
+  --channel telegram
+
+# Step 3: Calendar summary at 8:10 AM
+openclaw cron add \
+  --name "step3-calendar" \
+  --cron "10 8 * * *" \
+  --message "Summarize today's calendar" \
+  --announce \
+  --channel telegram
+```
+
+### Dynamic workflow via conditional cron
+
+Use different cron jobs based on conditions:
+
+```bash
+# Research workflow (runs if research-needed flag is set)
+openclaw cron add \
+  --name "research-check" \
+  --cron "0 10 * * 1" \
+  --message "If research-needed flag is set, perform web research and summarize findings" \
+  --announce \
+  --channel telegram
+
+# Approval workflow (send to restricted channel for human approval)
+openclaw cron add \
+  --name "approval-check" \
+  --cron "0 */4 * * *" \
+  --message "Send pending approval requests to admin channel" \
+  --announce \
+  --channel telegram \
+  --to "admin-user-id"
 ```
 
 ## Related modules and next step
