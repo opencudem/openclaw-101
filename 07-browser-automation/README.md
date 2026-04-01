@@ -19,10 +19,10 @@ Browser automation lets OpenClaw interact with websites like a human: navigate p
 
 ```bash
 # Install from ClawHub
-openclaw skill install browser-automation
+openclaw skills install browser-automation
 
-# Or via npx for latest version
-npx openclaw-skill-browser-automation
+# Check browser status
+openclaw browser status
 ```
 
 ### Basic Usage
@@ -38,104 +38,100 @@ User: Fill out the contact form on example.com with my info
 Agent: [Navigates to form, fills fields using your memory, submits]
 ```
 
-## Browser Actions
+## Browser CLI Commands
 
-| Action | Description | Example |
-|--------|-------------|---------|
-| `navigate` | Go to URL | `navigate("https://example.com")` |
-| `click` | Click element | `click("button.submit")` |
-| `type` | Fill input | `type("#email", "user@example.com")` |
-| `select` | Select dropdown | `select("#country", "Vietnam")` |
-| `extract` | Get data | `extract(".price")` |
-| `screenshot` | Capture page | `screenshot()` |
-| `scroll` | Scroll page | `scroll("down")` |
+| Command | Description | Example |
+|---------|-------------|---------|
+| `openclaw browser status` | Check browser status | `openclaw browser status` |
+| `openclaw browser start` | Start browser session | `openclaw browser start` |
+| `openclaw browser stop` | Stop browser session | `openclaw browser stop` |
+| `openclaw browser tabs` | List open tabs | `openclaw browser tabs` |
+| `openclaw browser open <url>` | Open URL in new tab | `openclaw browser open https://example.com` |
+| `openclaw browser close <tab-id>` | Close specific tab | `openclaw browser close tab-123` |
+| `openclaw browser navigate <url>` | Navigate to URL | `openclaw browser navigate https://example.com` |
+| `openclaw browser screenshot` | Take screenshot | `openclaw browser screenshot` |
+| `openclaw browser snapshot` | Capture page state | `openclaw browser snapshot` |
+| `openclaw browser click <selector>` | Click element | `openclaw browser click "button.submit"` |
+| `openclaw browser type <selector> <text>` | Type into input | `openclaw browser type "#email" "user@example.com"` |
+| `openclaw browser fill <selector> <value>` | Fill form field | `openclaw browser fill "#country" "Vietnam"` |
+| `openclaw browser press <key>` | Press key | `openclaw browser press "Enter"` |
+| `openclaw browser wait <ms>` | Wait milliseconds | `openclaw browser wait 1000` |
+| `openclaw browser evaluate <script>` | Execute JavaScript | `openclaw browser evaluate "document.title"` |
 
 ## Copy-paste examples
 
-### Research workflow
+### Research workflow via chat commands
+
+Instead of writing JavaScript, use natural language with your agent:
+
+```
+User: Open browser and navigate to google.com
+Agent: [Uses openclaw browser navigate]
+
+User: Search for "OpenClaw tutorials" and visit the first 3 results
+Agent: [Performs search, navigates, extracts content]
+
+User: Extract all links from the current page
+Agent: [Uses openclaw browser extractAll]
+```
+
+### Form automation via chat
+
+```
+User: Navigate to example.com/contact
+Agent: [Opens contact page]
+
+User: Fill the name field with "John", email with "john@example.com", and message with "Hello"
+Agent: [Uses openclaw browser type for each field]
+
+User: Click the submit button
+Agent: [Uses openclaw browser click]
+
+User: Take a screenshot to confirm
+Agent: [Uses openclaw browser screenshot]
+```
+
+### Using browser in skills (via exec)
+
+Skills can trigger browser commands via the exec tool:
 
 ```javascript
-// ~/.openclaw/skills/research/scripts/web-research.js
+// ~/.openclaw/skills/browser-helper/scripts/navigate.js
+const { execSync } = require('child_process');
+
 module.exports = {
-  async researchTopic({ query, sources = 3 }) {
-    // Search
-    await browser.navigate(`https://google.com/search?q=${encodeURIComponent(query)}`);
-    
-    // Get results
-    const links = await browser.extractAll('.g a[href]', 'href');
-    const topLinks = links.slice(0, sources);
-    
-    // Visit and extract
-    const results = [];
-    for (const link of topLinks) {
-      await browser.navigate(link);
-      const content = await browser.extract('article, .content, main');
-      results.push({ url: link, content });
-    }
-    
-    return results;
+  async navigateTo({ url }) {
+    // Use openclaw CLI to navigate
+    const result = execSync(`openclaw browser navigate "${url}"`, { encoding: 'utf8' });
+    return { success: true, result };
+  },
+  
+  async takeScreenshot() {
+    const result = execSync('openclaw browser screenshot', { encoding: 'utf8' });
+    return { screenshot: result };
   }
 };
 ```
 
-### Form automation
+### Price monitoring via chat
 
-```javascript
-// ~/.openclaw/skills/forms/scripts/fill-form.js
-module.exports = {
-  async fillContactForm({ name, email, message }) {
-    await browser.navigate('https://example.com/contact');
-    
-    // Fill fields
-    await browser.type('input[name="name"]', name);
-    await browser.type('input[name="email"]', email);
-    await browser.type('textarea[name="message"]', message);
-    
-    // Submit
-    await browser.click('button[type="submit"]');
-    
-    // Confirm
-    const confirmation = await browser.extract('.confirmation');
-    return confirmation;
-  }
-};
+```
+User: Navigate to example.com/product and extract the price
+Agent: [Uses openclaw browser navigate and extract]
+
+User: Compare with last check and alert if below $50
+Agent: [Maintains history, calculates change, sends alert if needed]
 ```
 
-### Price monitoring
+Or create a cron job to check regularly:
 
-```javascript
-// ~/.openclaw/skills/monitor/scripts/price-check.js
-const fs = require('fs').promises;
-const path = require('path');
-
-module.exports = {
-  async checkPrice({ url, selector, threshold }) {
-    await browser.navigate(url);
-    const priceText = await browser.extract(selector);
-    const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-    
-    // Compare with previous
-    const historyPath = path.join(process.env.HOME, '.openclaw/data/prices.json');
-    let history = {};
-    try {
-      history = JSON.parse(await fs.readFile(historyPath, 'utf8'));
-    } catch {}
-    
-    const previous = history[url];
-    const change = previous ? ((price - previous) / previous * 100).toFixed(1) : 0;
-    
-    // Save new price
-    history[url] = price;
-    await fs.writeFile(historyPath, JSON.stringify(history, null, 2));
-    
-    return {
-      price,
-      previous,
-      change: `${change}%`,
-      alert: price < threshold
-    };
-  }
-};
+```bash
+openclaw cron add \
+  --name "price-check" \
+  --cron "0 */6 * * *" \
+  --message "Check price on example.com/product and alert if below $50" \
+  --announce \
+  --channel telegram
 ```
 
 ## Safety Considerations
@@ -145,15 +141,7 @@ module.exports = {
 1. **Rate limiting**: Don't hammer websites. Add delays between requests.
 2. **Terms of service**: Respect robots.txt and site terms.
 3. **Sensitive data**: Never automate logins to financial/banking sites.
-4. **Approval gating**: For important actions, require confirmation:
-
-```javascript
-// Require approval before form submission
-await skills.approval.request({
-  message: 'Submit form with these details?',
-  details: { name, email, message }
-});
-```
+4. **DM policies**: For important actions, send to a restricted channel for approval
 
 ## Common mistakes and troubleshooting
 
@@ -166,42 +154,27 @@ await skills.approval.request({
 
 ## Advanced patterns
 
-### Session persistence
+### Using browser with cron
 
-```javascript
-// Save and restore login sessions
-const fs = require('fs').promises;
+Schedule regular browser tasks:
 
-module.exports = {
-  async saveSession({ site }) {
-    const cookies = await browser.getCookies();
-    await fs.writeFile(
-      `~/.openclaw/sessions/${site}.json`,
-      JSON.stringify(cookies)
-    );
-  },
-  
-  async restoreSession({ site }) {
-    const cookies = JSON.parse(
-      await fs.readFile(`~/.openclaw/sessions/${site}.json`)
-    );
-    await browser.setCookies(cookies);
-  }
-};
+```bash
+# Daily price check
+openclaw cron add \
+  --name "daily-price-check" \
+  --cron "0 9 * * *" \
+  --message "Check prices on monitored sites and report changes" \
+  --announce \
+  --channel telegram
 ```
 
-### Parallel browsing
+### Multi-step browser workflows
 
-```javascript
-// Check multiple sites concurrently
-async function checkMultipleSites(urls) {
-  const promises = urls.map(url => 
-    browser.newContext().then(ctx => 
-      ctx.navigate(url).then(() => ctx.extract('h1'))
-    )
-  );
-  return Promise.all(promises);
-}
+Chain multiple browser commands:
+
+```
+User: Navigate to dashboard.example.com, extract the metrics, and email the summary
+Agent: [Uses browser navigate, extract, then email skill]
 ```
 
 ## Related modules and next step
