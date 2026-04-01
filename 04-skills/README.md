@@ -18,11 +18,24 @@ Skills are how OpenClaw learns to do new things. This module covers finding skil
 Skill Sources (in priority order):
 ├── 1. Bundled Skills    (comes with OpenClaw)
 ├── 2. Workspace Skills  (~/.openclaw/skills/)
-├── 3. ClawHub Skills    (installed via openclaw skill install)
+├── 3. ClawHub Skills    (installed via openclaw skills install)
 └── 4. Custom Entries    (config-specified paths)
 ```
 
 Later sources override earlier ones. This lets you customize bundled skills.
+
+### Skill Loading Precedence (Highest to Lowest)
+
+When multiple skills have the same name, OpenClaw uses this priority order:
+
+1. **`<workspace>/skills`** - Workspace skills (highest priority)
+2. **`<workspace>/.agents/skills`** - Project agent skills
+3. **`~/.agents/skills`** - Personal agent skills
+4. **`~/.openclaw/skills`** - Managed/local skills
+5. **Bundled skills** - Skills shipped with OpenClaw
+6. **`skills.load.extraDirs`** - Extra directories from config (lowest priority)
+
+This precedence ensures workspace and agent-specific skills override system defaults.
 
 ## Quick Start
 
@@ -32,30 +45,40 @@ Browse available skills:
 
 ```bash
 # Search ClawHub
-openclaw skill search weather
+openclaw skills search weather
 
 # List installed skills
-openclaw skill list
+openclaw skills list
+openclaw skills list --eligible
 
 # Get skill info
-openclaw skill info weather
+openclaw skills info weather
+
+# Check for skill issues
+openclaw skills check
 ```
 
 ### Installing Skills
 
 ```bash
 # Install from ClawHub
-openclaw skill install weather
+openclaw skills install <slug>
+openclaw skills install weather
 
 # Install specific version
-openclaw skill install weather@1.2.0
+openclaw skills install <slug>@version
+openclaw skills install weather@1.2.0
 
 # Update a skill
-openclaw skill update weather
+openclaw skills update weather
+openclaw skills update --all
 
-# Remove a skill
-openclaw skill remove weather
+# For publishing/updating via ClawHub CLI
+clawhub sync --all
 ```
+
+**Install Location:** `~/.openclaw/skills/` (for managed/local skills)  
+**Note:** Workspace skills at `<workspace>/skills` have highest precedence
 
 ### Installing via npx (for development)
 
@@ -79,13 +102,22 @@ my-skill/
     └── forecast.js
 ```
 
-### SKILL.md Format
+### SKILL.md Format (AgentSkills-compatible)
+
+Required YAML frontmatter with OpenClaw metadata:
 
 ```markdown
+---
+name: my-skill
+description: Brief description of what this skill does
+metadata:
+  { "openclaw": { "requires": { "bins": ["uv"], "env": ["API_KEY"], "config": ["browser.enabled"] }, "primaryEnv": "API_KEY" } }
+---
+
 # My Skill
 
 ## Description
-What this skill does and when to use it.
+Detailed explanation of what this skill does and when to use it.
 
 ## Tools
 
@@ -100,6 +132,23 @@ Get current weather for a location.
 getWeather({ location: "New York" })
 ```
 ```
+
+**Required:**
+- YAML frontmatter with `name` and `description`
+- Single-line keys only
+- `metadata` as single-line JSON object with `openclaw.requires`
+
+**Gating Options:**
+- `requires.bins`: binaries that must be on PATH
+- `requires.env`: environment variables that must be set
+- `requires.config`: config paths that must exist
+- `requires.anyBins`: at least one of these binaries
+- `always: true`: skip all gates
+
+**Optional frontmatter keys:**
+- `homepage`: Website URL
+- `user-invocable: true|false`: Expose as slash command (default: true)
+- `disable-model-invocation: true|false`: Exclude from model prompt (default: false)
 
 ## Creating Your First Skill
 
