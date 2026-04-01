@@ -12,27 +12,45 @@ Without memory, every conversation starts fresh. With memory, your assistant kno
 - You're working on long-term projects
 - You want the assistant to learn your style
 
-## Types of Memory
+## Memory Locations
 
-OpenClaw has multiple memory layers:
+OpenClaw reads memory from these locations (in priority order):
 
-```
-┌─────────────────────────────────────────┐
-│           Conversation Context          │  ← Current chat (temporary)
-├─────────────────────────────────────────┤
-│         File-Based Memory               │  ← ~/.openclaw/memory/
-├─────────────────────────────────────────┤
-│         Skill Memory                    │  ← Skills store data
-├─────────────────────────────────────────┤
-│         External Integrations           │  ← Notion, databases
-└─────────────────────────────────────────┘
+| Location | Purpose | Priority |
+|----------|---------|----------|
+| `MEMORY.md` | Long-term curated memory | Highest |
+| `memory/*.md` | Daily notes, project context | High |
+| `~/.openclaw/memory/` | Global cross-workspace memory | Medium |
+
+## Memory CLI Commands
+
+OpenClaw provides CLI commands to manage and search memory:
+
+```bash
+# Check memory status
+openclaw memory status
+
+# Index memory files (refresh search index)
+openclaw memory index
+
+# Search your memory
+openclaw memory search "database decision"
+openclaw memory search --query "what did we decide about postgres"
 ```
 
 ## Quick Start
 
-### File-Based Memory
+### 1. Check Memory Status
 
-Create memory files that the assistant can read:
+```bash
+openclaw memory status
+```
+
+This shows which memory files are loaded and their status.
+
+### 2. Create Memory Files
+
+Create memory files that OpenClaw automatically reads:
 
 ```bash
 # Create memory directory
@@ -53,6 +71,18 @@ EOF
 ```
 
 The assistant automatically reads these files when starting a conversation.
+
+### 3. Index and Search
+
+```bash
+# Index your memory files
+openclaw memory index
+
+# Search for specific information
+openclaw memory search "your query here"
+```
+
+## Memory Patterns
 
 ### Daily Notes Pattern
 
@@ -98,6 +128,28 @@ mkdir -p ~/.openclaw/memory/projects
 # - Phase 1: Core modules (in progress)
 ```
 
+### Workspace Memory
+
+For project-specific memory, use the workspace root:
+
+```bash
+# In your project workspace
+cat > MEMORY.md << 'EOF'
+# Project Context
+
+## Current Goal
+Implement feature X by Friday
+
+## Key Decisions
+- Using Redis for caching
+- API rate limit: 100 req/min
+
+## Team
+- Lead: Jane
+- Backend: Bob
+EOF
+```
+
 ## Memory in Practice
 
 ### Mention memory in chat
@@ -106,14 +158,16 @@ mkdir -p ~/.openclaw/memory/projects
 User: Remember that I prefer brief responses
 Agent: Got it — I'll keep my replies concise.
 
-[This gets added to your memory file automatically]
+[This can be saved to your memory file]
 ```
 
 ### Query your memory
 
-```
-User: What did we discuss yesterday?
-Agent: [Reads from daily notes and summarizes]
+```bash
+# Search for past decisions
+openclaw memory search "database decision"
+
+# The agent can also search during conversations
 ```
 
 ### Update preferences
@@ -123,7 +177,7 @@ User: Actually, I changed my mind about the database. Use SQLite instead.
 Agent: Updated. I've noted the switch to SQLite in your project memory.
 ```
 
-## Copy-paste examples
+## Copy-Paste Examples
 
 ### Memory file template
 
@@ -147,46 +201,30 @@ Agent: Updated. I've noted the switch to SQLite in your project memory.
 - [Anything the agent should know]
 ```
 
-### Auto-remember script
+### Search memory
 
-Add to your OpenClaw skills:
+```bash
+# Search for specific topics in your memory
+openclaw memory search "postgres"
 
-```javascript
-// ~/.openclaw/skills/memory-helper/scripts/save-note.js
-const fs = require('fs');
-const path = require('path');
-
-function saveNote(category, content) {
-  const date = new Date().toISOString().split('T')[0];
-  const notePath = path.join(
-    process.env.HOME,
-    '.openclaw/memory',
-    category,
-    `${date}.md`
-  );
-  
-  fs.mkdirSync(path.dirname(notePath), { recursive: true });
-  fs.appendFileSync(notePath, `\n## ${new Date().toLocaleTimeString()}\n${content}\n`);
-  
-  return `Saved to ${category}/${date}.md`;
-}
-
-module.exports = { saveNote };
+# Search with natural language
+openclaw memory search --query "what database did we choose"
 ```
 
-## Common mistakes and troubleshooting
+## Common Mistakes and Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| Memory not being read | Check file location: must be in ~/.openclaw/memory/ |
+| Memory not being read | Check file location: must be in `MEMORY.md`, `memory/*.md`, or `~/.openclaw/memory/` |
+| Search returns nothing | Run `openclaw memory index` to refresh the index |
 | Too much old context | Archive old daily notes; keep only recent ones |
 | Sensitive info exposed | Use restricted channels; separate personal/work memory |
 
-## Advanced patterns
+## Advanced Patterns
 
 ### Structured memory with JSON
 
-For programmatic access:
+For programmatic access, you can also use JSON:
 
 ```json
 {
@@ -206,16 +244,14 @@ For programmatic access:
 }
 ```
 
-### Memory search
+### Automating memory indexing
 
-Create a simple search:
+Add to your shell profile to auto-index on login:
 
 ```bash
-# Search memory files
-grep -r "database" ~/.openclaw/memory/
-
-# Or use a skill that indexes memory
-openclaw skill search-memory "database decision"
+# ~/.bashrc or ~/.zshrc
+alias om="openclaw memory"
+alias oms="openclaw memory search"
 ```
 
 ## Related modules and next step
