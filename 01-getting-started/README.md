@@ -23,24 +23,45 @@ This module takes you from zero to a working OpenClaw Gateway with your first co
 ### Installation
 
 ```bash
-# Install OpenClaw globally
-npm install -g openclaw
+# Official install script (recommended)
+curl -fsSL https://openclaw.ai/install.sh | bash
+
+# Alternative: npm install
+npm install -g openclaw@latest
 
 # Verify installation
 openclaw --version
-
-# Initialize configuration
-openclaw init
 ```
 
-### Start the Gateway
+### Onboarding and Gateway Setup
 
 ```bash
-# Start the Gateway daemon
-openclaw gateway start
+# Interactive onboarding with daemon installation
+openclaw onboard --install-daemon
+
+# Or quick setup flow (minimal prompts)
+openclaw onboard --flow quickstart
+```
+
+**Onboarding flags:**
+- `--install-daemon`: Install system service (launchd/systemd/schtasks)
+- `--flow quickstart|manual`: Choose prompt level
+- `--mode local|remote`: Gateway location
+- `--non-interactive`: For automation/scripts
+- `--accept-risk`: Acknowledge security considerations
+
+### Run the Gateway
+
+```bash
+# Run gateway in foreground (development)
+openclaw gateway
+
+# Or use alias
+openclaw gateway run
 
 # Check status
 openclaw gateway status
+openclaw gateway status --require-rpc
 ```
 
 ### Connect Your First Channel
@@ -51,7 +72,7 @@ openclaw gateway status
 # 1. Create a bot with @BotFather on Telegram
 # 2. Get your bot token
 # 3. Add the channel
-openclaw channel add telegram --token YOUR_BOT_TOKEN
+openclaw channels add --channel telegram --token YOUR_BOT_TOKEN
 ```
 
 **Option B: Discord**
@@ -60,7 +81,7 @@ openclaw channel add telegram --token YOUR_BOT_TOKEN
 # 1. Create a Discord application at https://discord.com/developers/applications
 # 2. Enable Bot scope, get token
 # 3. Add the channel
-openclaw channel add discord --token YOUR_BOT_TOKEN
+openclaw channels add --channel discord --token YOUR_BOT_TOKEN
 ```
 
 ### Verify Everything Works
@@ -96,14 +117,8 @@ openclaw gateway logs --tail 50
 ### List connected channels
 
 ```bash
-openclaw channel list
-```
-
-### Pause/resume a channel
-
-```bash
-openclaw channel pause telegram
-openclaw channel resume telegram
+openclaw channels list
+openclaw channels status
 ```
 
 ## Common mistakes and troubleshooting
@@ -111,7 +126,7 @@ openclaw channel resume telegram
 | Problem | Solution |
 |---------|----------|
 | "command not found: openclaw" | Make sure npm global bin is in your PATH |
-| Gateway won't start | Check port 3000 isn't in use: `lsof -i :3000` |
+| Gateway won't start | Check port 18789 isn't in use: `lsof -i :18789` |
 | Bot doesn't respond | Verify token is correct; check gateway logs |
 | Messages delayed | Check your internet connection and API credits |
 
@@ -120,15 +135,15 @@ openclaw channel resume telegram
 ### Run Gateway on a different port
 
 ```bash
-openclaw gateway start --port 8080
+openclaw gateway --port 8080
 ```
 
 ### Environment variables
 
-Create a `.env` file:
+Create a `.env` file in `~/.openclaw/.env`:
 
 ```env
-OPENCLAW_PORT=3000
+OPENCLAW_PORT=18789
 OPENCLAW_LOG_LEVEL=info
 OPENCLAW_PROVIDER=anthropic
 ```
