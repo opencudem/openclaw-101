@@ -1,10 +1,10 @@
 # 05 - Integrations
 
-> Connect OpenClaw to your tools: GitHub, Calendar, Email, Databases, and APIs.
+> Connect OpenClaw to your tools: GitHub, Calendar, Email, and more.
 
 ## What this module solves
 
-Skills are building blocks; integrations are how you connect to external services. This module covers the most useful integrations and how to configure them.
+Skills are building blocks; integrations are how you connect to external services. This module covers how to discover, install, and configure real integrations from ClawHub.
 
 ## When to use this module
 
@@ -13,17 +13,42 @@ Skills are building blocks; integrations are how you connect to external service
 - You want to send/receive emails
 - You need database access
 
-## Quick Start
+## Discovering Real Integrations
+
+Always verify integrations exist on ClawHub before documenting:
+
+```bash
+# Search ClawHub for available skills
+openclaw skills search "github"
+openclaw skills search "calendar"
+openclaw skills search "email"
+openclaw skills search "database"
+
+# List available skills with details
+openclaw skills list --eligible
+```
+
+**ClawHub Registry:** https://clawhub.ai
+
+## Verified Integrations
+
+These integrations have been verified on ClawHub:
 
 ### GitHub Integration
 
 ```bash
-# Install GitHub skill
-openclaw skill install github
+# Install GitHub skill from ClawHub
+openclaw skills install github
 
-# Configure with personal access token
-openclaw config set github.token YOUR_GITHUB_TOKEN
+# Verify installation
+openclaw skills info github
 ```
+
+**What it does:** Uses the `gh` CLI to interact with GitHub (issues, PRs, CI runs)
+
+**Requirements:**
+- `gh` CLI must be installed and authenticated
+- Run `gh auth login` to authenticate
 
 Use it:
 
@@ -32,40 +57,58 @@ User: Check my PRs
 Agent: You have 3 open PRs: ...
 
 User: Review #42 in openclaw/openclaw
-Agent: [Fetches PR details and provides summary]
+Agent: [Fetches PR details using gh pr view 42 --repo openclaw/openclaw]
 ```
+
+---
 
 ### Calendar Integration
 
 ```bash
-# Install calendar skill
-openclaw skill install calendar
+# Search for calendar skills
+openclaw skills search "calendar"
 
-# Configure (Google Calendar example)
-openclaw config set calendar.provider google
-openclaw config set calendar.credentials ~/.openclaw/secrets/gcal.json
+# Install a verified calendar skill
+openclaw skills install caldav-calendar
+
+# Or install calendar-planner for advanced planning
+openclaw skills install calendar-planner
 ```
+
+**What it does:** Syncs and queries CalDAV calendars (iCloud, Google, Fastmail, Nextcloud)
+
+**Requirements:**
+- `vdirsyncer` and `khal` binaries
+- CalDAV calendar credentials
 
 Use it:
 
 ```
 User: What's on my calendar today?
-Agent: You have 2 events: 10:00 Team Standup, 14:00 Design Review
+Agent: [Uses khal list to show today's events]
 
-User: Schedule a meeting with Alice tomorrow at 2pm
-Agent: Created event "Meeting with Alice" for tomorrow at 14:00.
+User: Schedule a meeting tomorrow at 2pm
+Agent: [Uses khal new to create the event]
 ```
+
+---
 
 ### Email Integration
 
 ```bash
-# Install email skill
-openclaw skill install email
+# Search for email skills
+openclaw skills search "email"
 
-# Configure SMTP/IMAP or use AgentMail
-openclaw config set email.provider agentmail
-openclaw config set email.api_key YOUR_AGENTMAIL_KEY
+# Install IMAP/SMTP email skill
+openclaw skills install imap-smtp-email
 ```
+
+**What it does:** Read and send email via IMAP/SMTP protocols
+
+**Requirements:**
+- Node.js and npm
+- IMAP/SMTP credentials
+- Run `bash setup.sh` to configure
 
 Use it:
 
@@ -74,23 +117,75 @@ User: Check my email
 Agent: You have 5 unread messages. 2 require action.
 
 User: Send email to team@company.com about the release
-Agent: Draft ready. Send it? [Yes/No]
+Agent: [Drafts and sends email via SMTP]
 ```
 
-## Popular Integrations
+---
 
-| Integration | Use Case | Install Command |
-|-------------|----------|-----------------|
-| **github** | PRs, issues, repos | `openclaw skill install github` |
-| **calendar** | Schedule, events | `openclaw skill install calendar` |
-| **email** | Send/receive | `openclaw skill install email` |
-| **notion** | Notes, wikis | `openclaw skill install notion` |
-| **trello** | Project mgmt | `openclaw skill install trello` |
-| **linear** | Issue tracking | `openclaw skill install linear` |
-| **postgres** | Database access | `openclaw skill install postgres` |
-| **sqlite** | Local database | `openclaw skill install sqlite` |
+## Finding and Installing Skills
+
+### Search ClawHub
+
+```bash
+# Search for skills by keyword
+openclaw skills search "github"
+openclaw skills search "weather"
+openclaw skills search "database"
+
+# Get detailed info about a skill
+openclaw skills info github
+```
+
+### Install Skills
+
+```bash
+# Install from ClawHub
+openclaw skills install <slug>
+
+# Install specific version
+openclaw skills install <slug> --version <version>
+
+# Update a skill
+openclaw skills update <slug>
+
+# Check for issues with installed skills
+openclaw skills check
+```
+
+**Install Location:** `~/.openclaw/skills/` (for managed/local skills)
+
+---
 
 ## Configuration Patterns
+
+### Using SecretRef for Secure Credentials
+
+Instead of storing credentials in plain text config files, use SecretRef:
+
+```yaml
+# ~/.openclaw/config.yaml
+skills:
+  entries:
+    github:
+      config:
+        token:
+          secretRef: GITHUB_TOKEN  # Reads from OPENCLAW_SECRET_GITHUB_TOKEN env var
+    email:
+      config:
+        smtp_password:
+          secretRef: SMTP_PASSWORD
+```
+
+**SecretRef format:**
+```json
+{
+  "source": "env",
+  "provider": "default",
+  "id": "API_KEY_NAME"
+}
+```
+
+The agent will look for `OPENCLAW_SECRET_<id>` in environment variables.
 
 ### Using Environment Variables
 
@@ -98,9 +193,7 @@ Agent: Draft ready. Send it? [Yes/No]
 # ~/.bashrc or ~/.zshrc
 export GITHUB_TOKEN=ghp_xxxxxxxx
 export OPENAI_API_KEY=sk-xxxxxxxx
-
-# Then reference in config
-openclaw config set github.token "$GITHUB_TOKEN"
+export SMTP_PASSWORD=your_smtp_password
 ```
 
 ### Using .env Files
@@ -122,27 +215,44 @@ chmod 700 ~/.openclaw/secrets
 cp service-account.json ~/.openclaw/secrets/
 ```
 
-## Copy-paste examples
+---
 
-### GitHub webhook handler
+## Copy-Paste Examples
 
-```javascript
-// ~/.openclaw/skills/github-webhook/scripts/handler.js
-module.exports = {
-  onPR: async (payload) => {
-    const { action, pull_request } = payload;
-    
-    if (action === 'opened') {
-      await skills.notify.send({
-        channel: 'slack',
-        message: `New PR: ${pull_request.title} by ${pull_request.user.login}`
-      });
-    }
-  }
-};
+### Skill Discovery Workflow
+
+```bash
+# 1. Search for what you need
+openclaw skills search "weather"
+
+# 2. Get info about a specific skill
+openclaw skills info weather
+
+# 3. Install it
+openclaw skills install weather
+
+# 4. Verify it works
+openclaw skills check
 ```
 
-### Database query helper
+### GitHub Workflow Example
+
+```bash
+# Install and configure GitHub skill
+openclaw skills install github
+
+# Ensure gh CLI is authenticated
+gh auth login
+
+# Now you can ask your agent:
+# "List my open PRs"
+# "Check status of PR #42"
+# "View failed CI runs"
+```
+
+### Database Query Helper
+
+For database access, you may need to create a custom skill:
 
 ```javascript
 // ~/.openclaw/skills/db-query/scripts/query.js
@@ -163,18 +273,26 @@ module.exports = {
 };
 ```
 
-## Common mistakes and troubleshooting
+---
+
+## Common Mistakes and Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
+| "skill not found" | Use `openclaw skills` (plural), not `openclaw skill` |
 | 401 Unauthorized | Check API tokens; verify scopes/permissions |
 | Rate limiting | Add delays; use caching; upgrade plan |
 | Connection timeout | Check firewall; verify endpoint URLs |
-| SSL errors | Update certificates; check system time |
+| Skill not appearing | Run `openclaw skills check` to verify installation |
+| Credentials exposed | Use SecretRef instead of plain text in config |
 
-## Advanced patterns
+---
 
-### Integration chaining
+## Advanced Patterns
+
+### Integration Chaining
+
+Combine multiple skills in one workflow:
 
 ```javascript
 // Skill that combines multiple integrations
@@ -193,7 +311,7 @@ module.exports = {
 };
 ```
 
-### Error handling wrapper
+### Error Handling Wrapper
 
 ```javascript
 // Robust integration call
@@ -207,14 +325,17 @@ async function safeIntegrationCall(fn, fallback) {
 }
 ```
 
-## Related modules and next step
+---
+
+## Related Modules and Next Steps
 
 - Previous: [04-skills](../04-skills/)
 - Next: [06-automation](../06-automation/)
-- Reference: [Integration catalog](CATALOG.md)
+- Reference: [ClawHub](https://clawhub.ai)
+- Command Reference: `openclaw skills --help`
 
 ---
 
 **Time to complete:** 45 minutes  
 **Prerequisites:** [04-skills](../04-skills/)  
-**Outcome:** Connected to external services, automated tool workflows
+**Outcome:** Connected to external services via verified ClawHub skills
