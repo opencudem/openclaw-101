@@ -427,6 +427,7 @@ EOF
 - Create **New Application** (don't reuse existing bot)
 - Bot → Add Bot → Copy Token
 - Enable **Message Content Intent**
+- Invite the new bot to your Discord server
 
 **Step 5: Restart gateway**
 ```bash
