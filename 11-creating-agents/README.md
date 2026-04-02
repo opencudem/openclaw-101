@@ -125,7 +125,41 @@ openclaw agents bind --agent work --bind github:company
 openclaw agents list --bindings
 ```
 
-### Step 4: Configure Identity
+### Step 4: Configure Channel Credentials (IMPORTANT)
+
+**Binding routes incoming messages to the agent, but each agent needs its own credentials to respond.**
+
+For **Discord** and other channels, create an `auth-profiles.json` file:
+
+```bash
+# Create the auth profiles directory
+mkdir -p ~/.openclaw/agents/work/agent
+
+# Create the auth file
+cat > ~/.openclaw/agents/work/agent/auth-profiles.json << 'EOF'
+{
+  "discord": {
+    "default": {
+      "botToken": "YOUR_WORK_BOT_TOKEN_HERE"
+    }
+  },
+  "slack": {
+    "default": {
+      "botToken": "xoxb-YOUR-WORK-SLACK-TOKEN"
+    }
+  }
+}
+EOF
+```
+
+**⚠️ Critical:** Each agent needs its **own Discord bot** (separate application at https://discord.com/developers/applications). Sharing tokens between agents causes routing confusion.
+
+**Why this is needed:**
+- Binding (`--bind`) = Routes **incoming** messages to the agent
+- Auth profiles = Allows agent to send **outgoing** responses
+- Without auth profiles, the agent cannot reply to the channel
+
+### Step 5: Configure Identity
 
 Set the agent's name, avatar, and theme:
 
@@ -141,7 +175,7 @@ Or load from IDENTITY.md:
 openclaw agents set-identity --agent work --from-identity
 ```
 
-### Step 5: Restart and Verify
+### Step 6: Restart and Verify
 
 ```bash
 # Restart gateway to apply changes
@@ -351,9 +385,58 @@ Document what each agent does:
 |---------|--------------|----------|
 | Reusing agentDir | Auth/session collisions | Use `openclaw agents add` for each |
 | Sharing workspaces | Memory bleed | Separate directories |
-| Same channel tokens | Cross-routing chaos | One token per agent per channel |
+| **Same channel tokens** | **Cross-routing chaos** | **One token per agent per channel** |
+| **Missing auth-profiles.json** | **Agent can't respond** | **Create `~/.openclaw/agents/<name>/agent/auth-profiles.json`** |
 | No bindings | All agents receive all messages | Explicit `agents bind` |
 | Unclear scope | Agents overlap | Document in AGENTS.md |
+
+## Troubleshooting: Agent Not Responding in Channel
+
+**Problem:** You bound the agent to Discord, but the main agent still responds (or no response at all).
+
+**Diagnosis Steps:**
+
+**Step 1: Check the binding exists**
+```bash
+openclaw agents list --bindings
+# Should show: docloop → discord:YOUR_CHANNEL_ID
+```
+
+**Step 2: Check auth-profiles.json exists**
+```bash
+ls ~/.openclaw/agents/docloop/agent/auth-profiles.json
+# If missing, the agent can't respond!
+```
+
+**Step 3: Create auth-profiles.json**
+```bash
+mkdir -p ~/.openclaw/agents/docloop/agent
+cat > ~/.openclaw/agents/docloop/agent/auth-profiles.json << 'EOF'
+{
+  "discord": {
+    "default": {
+      "botToken": "YOUR_BOT_TOKEN_HERE"
+    }
+  }
+}
+EOF
+```
+
+**Step 4: Get a separate Discord bot token**
+- Go to https://discord.com/developers/applications
+- Create **New Application** (don't reuse existing bot)
+- Bot → Add Bot → Copy Token
+- Enable **Message Content Intent**
+
+**Step 5: Restart gateway**
+```bash
+openclaw gateway restart
+```
+
+**Why this happens:**
+- **Binding** (`--bind`) = Routes **incoming** messages to agent ✅
+- **Auth profiles** = Allows **outgoing** responses ❌ (often forgotten!)
+- Each agent needs its **own bot token** to send messages
 
 ## CLI Reference
 
