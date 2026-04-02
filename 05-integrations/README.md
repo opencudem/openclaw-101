@@ -1,341 +1,339 @@
 # 05 - Integrations
 
-> Connect OpenClaw to your tools: GitHub, Calendar, Email, and more.
+> Connect OpenClaw to your external tools and services: GitHub, Calendar, Email, and more.
 
 ## What this module solves
 
-Skills are building blocks; integrations are how you connect to external services. This module covers how to discover, install, and configure real integrations from ClawHub.
+Integrations allow OpenClaw to interact with your external services - GitHub repos, Google Calendar, email accounts, databases, and APIs. This module covers how to configure these connections securely.
 
 ## When to use this module
 
-- You want to automate GitHub workflows
-- You need calendar management
+- You want to automate GitHub workflows (PRs, issues, CI)
+- You need calendar access (Google, iCloud, Outlook)
 - You want to send/receive emails
-- You need database access
+- You need database connections
+- You want API integrations (Slack, Notion, etc.)
 
-## Discovering Real Integrations
+## How Integrations Work
 
-Always verify integrations exist on ClawHub before documenting:
+Integrations are configured via:
+1. **Environment variables** - For API keys and tokens
+2. **OpenClaw config** - `~/.openclaw/config.yaml` or `openclaw.json`
+3. **Skill configs** - Individual skill configuration files
 
-```bash
-# Search ClawHub for available skills
-openclaw skills search "github"
-openclaw skills search "calendar"
-openclaw skills search "email"
-openclaw skills search "database"
-
-# List available skills with details
-openclaw skills list --eligible
-```
-
-**ClawHub Registry:** https://clawhub.ai
-
-## Verified Integrations
-
-These integrations have been verified on ClawHub:
-
-### GitHub Integration
-
-```bash
-# Install GitHub skill from ClawHub
-openclaw skills install github
-
-# Verify installation
-openclaw skills info github
-```
-
-**What it does:** Uses the `gh` CLI to interact with GitHub (issues, PRs, CI runs)
-
-**Requirements:**
-- `gh` CLI must be installed and authenticated
-- Run `gh auth login` to authenticate
-
-Use it:
-
-```
-User: Check my PRs
-Agent: You have 3 open PRs: ...
-
-User: Review #42 in openclaw/openclaw
-Agent: [Fetches PR details using gh pr view 42 --repo openclaw/openclaw]
-```
+The agent uses these credentials to authenticate with external services.
 
 ---
 
-### Calendar Integration
+## Configuration Fundamentals
+
+### 1. Environment Variables (Recommended for tokens)
+
+Store sensitive credentials in your shell:
 
 ```bash
-# Search for calendar skills
-openclaw skills search "calendar"
-
-# Install a verified calendar skill
-openclaw skills install caldav-calendar
-
-# Or install calendar-planner for advanced planning
-openclaw skills install calendar-planner
+# ~/.bashrc or ~/.zshrc
+export GITHUB_TOKEN="ghp_your_token_here"
+export OPENAI_API_KEY="sk-your_key_here"
+export ANTHROPIC_API_KEY="sk-ant-your_key_here"
+export SMTP_PASSWORD="your_email_password"
+export CALENDAR_PASSWORD="your_calendar_app_password"
 ```
 
-**What it does:** Syncs and queries CalDAV calendars (iCloud, Google, Fastmail, Nextcloud)
-
-**Requirements:**
-- `vdirsyncer` and `khal` binaries
-- CalDAV calendar credentials
-
-Use it:
-
-```
-User: What's on my calendar today?
-Agent: [Uses khal list to show today's events]
-
-User: Schedule a meeting tomorrow at 2pm
-Agent: [Uses khal new to create the event]
-```
-
----
-
-### Email Integration
-
+Then reload:
 ```bash
-# Search for email skills
-openclaw skills search "email"
-
-# Install IMAP/SMTP email skill
-openclaw skills install imap-smtp-email
+source ~/.bashrc
 ```
 
-**What it does:** Read and send email via IMAP/SMTP protocols
+### 2. SecretRef in Config (Most Secure)
 
-**Requirements:**
-- Node.js and npm
-- IMAP/SMTP credentials
-- Run `bash setup.sh` to configure
-
-Use it:
-
-```
-User: Check my email
-Agent: You have 5 unread messages. 2 require action.
-
-User: Send email to team@company.com about the release
-Agent: [Drafts and sends email via SMTP]
-```
-
----
-
-## Finding and Installing Skills
-
-### Search ClawHub
-
-```bash
-# Search for skills by keyword
-openclaw skills search "github"
-openclaw skills search "weather"
-openclaw skills search "database"
-
-# Get detailed info about a skill
-openclaw skills info github
-```
-
-### Install Skills
-
-```bash
-# Install from ClawHub
-openclaw skills install <slug>
-
-# Install specific version
-openclaw skills install <slug> --version <version>
-
-# Update a skill
-openclaw skills update <slug>
-
-# Check for issues with installed skills
-openclaw skills check
-```
-
-**Install Location:** `~/.openclaw/skills/` (for managed/local skills)
-
----
-
-## Configuration Patterns
-
-### Using SecretRef for Secure Credentials
-
-Instead of storing credentials in plain text config files, use SecretRef:
+Use `secretRef` to reference environment variables in config:
 
 ```yaml
 # ~/.openclaw/config.yaml
+models:
+  providers:
+    anthropic:
+      apiKey:
+        secretRef: ANTHROPIC_API_KEY  # Reads from env var
+        
 skills:
   entries:
     github:
       config:
         token:
-          secretRef: GITHUB_TOKEN  # Reads from OPENCLAW_SECRET_GITHUB_TOKEN env var
-    email:
-      config:
-        smtp_password:
-          secretRef: SMTP_PASSWORD
+          secretRef: GITHUB_TOKEN
 ```
 
 **SecretRef format:**
+```yaml
+key:
+  secretRef: ENV_VAR_NAME  # Agent looks for OPENCLAW_SECRET_ENV_VAR_NAME or ENV_VAR_NAME
+```
+
+### 3. Direct Config (Not recommended for production)
+
+For non-sensitive config only:
+
+```yaml
+# ~/.openclaw/config.yaml
+gateway:
+  port: 18789
+  
+tools:
+  web:
+    search:
+      provider: brave
+```
+
+---
+
+## Verified Integrations
+
+These integrations have been verified and tested:
+
+### GitHub Integration
+
+**What it does:** Access GitHub repos, PRs, issues, CI status via the `gh` CLI
+
+**Setup:**
+```bash
+# 1. Install gh CLI
+brew install gh  # macOS
+# or apt install gh  # Linux
+
+# 2. Authenticate
+git auth login
+
+# 3. Set token in env (if using in container/headless)
+export GITHUB_TOKEN="ghp_your_token"
+```
+
+**Use via chat:**
+```
+User: List my open PRs in openclaw/openclaw
+Agent: [Uses gh pr list to show PRs]
+
+User: Check the status of PR #42
+Agent: [Uses gh pr view 42 --json state,checks]
+
+User: Comment "LGTM" on PR #42
+Agent: [Uses gh pr comment 42 --body "LGTM"]
+```
+
+---
+
+### Calendar Integration (CalDAV)
+
+**What it does:** Read/write calendar events via CalDAV protocol
+
+**Setup:**
+```bash
+# 1. Install required binaries
+pip install vdirsyncer
+pip install khal
+
+# 2. Configure vdirsyncer
+# ~/.config/vdirsyncer/config
+[pair my_calendar]
+a = my_local
+b = my_remote
+collections = ["from a", "from b"]
+
+[storage my_local]
+type = filesystem
+path = ~/.calendars/
+fileext = .ics
+
+[storage my_remote]
+type = caldav
+url = https://caldav.fastmail.com/dav/calendars/
+username = your@email.com
+password = your_app_password
+```
+
+**Use via chat:**
+```
+User: What's on my calendar today?
+Agent: [Uses khal list today to show events]
+
+User: Add a meeting tomorrow at 2pm with Alice
+Agent: [Uses khal new to create event]
+```
+
+---
+
+### Email Integration (IMAP/SMTP)
+
+**What it does:** Read inbox and send emails
+
+**Setup:**
+```bash
+# Set credentials in environment
+export EMAIL_IMAP_SERVER="imap.gmail.com"
+export EMAIL_IMAP_USER="you@gmail.com"
+export EMAIL_IMAP_PASS="your_app_password"
+export EMAIL_SMTP_SERVER="smtp.gmail.com"
+export EMAIL_SMTP_USER="you@gmail.com"
+export EMAIL_SMTP_PASS="your_app_password"
+```
+
+**Use via chat:**
+```
+User: Check my unread emails
+Agent: [Connects to IMAP, fetches unread count]
+
+User: Send an email to team@company.com about the release
+Agent: [Drafts via chat, sends via SMTP]
+```
+
+---
+
+### Web Search Integration
+
+**What it does:** Search the web via Brave, Google, or other providers
+
+**Setup:**
+```bash
+# For Brave Search
+export BRAVE_API_KEY="your_brave_key"
+
+# For Google Custom Search
+export GOOGLE_SEARCH_API_KEY="your_key"
+export GOOGLE_SEARCH_CX="your_cx"
+```
+
+**Configure in openclaw.json:**
 ```json
 {
-  "source": "env",
-  "provider": "default",
-  "id": "API_KEY_NAME"
+  "tools": {
+    "web": {
+      "search": {
+        "provider": "brave",
+        "apiKey": { "secretRef": "BRAVE_API_KEY" }
+      }
+    }
+  }
 }
 ```
 
-The agent will look for `OPENCLAW_SECRET_<id>` in environment variables.
-
-### Using Environment Variables
-
-```bash
-# ~/.bashrc or ~/.zshrc
-export GITHUB_TOKEN=ghp_xxxxxxxx
-export OPENAI_API_KEY=sk-xxxxxxxx
-export SMTP_PASSWORD=your_smtp_password
+**Use via chat:**
 ```
+User: Search for OpenClaw tutorials
+Agent: [Uses web_search to find results]
 
-### Using .env Files
-
-```bash
-# ~/.openclaw/.env
-GITHUB_TOKEN=ghp_xxxxxxxx
-CALENDAR_CREDENTIALS=~/.openclaw/secrets/calendar.json
-```
-
-### Secrets Management
-
-```bash
-# Create secrets directory
-mkdir -p ~/.openclaw/secrets
-chmod 700 ~/.openclaw/secrets
-
-# Store sensitive files
-cp service-account.json ~/.openclaw/secrets/
+User: What are the latest AI agent frameworks?
+Agent: [Searches, extracts, summarizes]
 ```
 
 ---
 
-## Copy-Paste Examples
+## Integration Configuration Patterns
 
-### Skill Discovery Workflow
+### Pattern 1: Simple Environment Variable
 
-```bash
-# 1. Search for what you need
-openclaw skills search "weather"
-
-# 2. Get info about a specific skill
-openclaw skills info weather
-
-# 3. Install it
-openclaw skills install weather
-
-# 4. Verify it works
-openclaw skills check
-```
-
-### GitHub Workflow Example
+For quick setup:
 
 ```bash
-# Install and configure GitHub skill
-openclaw skills install github
-
-# Ensure gh CLI is authenticated
-gh auth login
-
-# Now you can ask your agent:
-# "List my open PRs"
-# "Check status of PR #42"
-# "View failed CI runs"
+export API_KEY="your_key"
 ```
 
-### Database Query Helper
+Then in chat:
+```
+User: Use my API key to check the weather
+Agent: [Reads API_KEY from env, makes API call]
+```
 
-For database access, you may need to create a custom skill:
+### Pattern 2: SecretRef with Fallback
 
-```javascript
-// ~/.openclaw/skills/db-query/scripts/query.js
-const { Client } = require('pg');
+For production:
 
-module.exports = {
-  async runQuery({ sql, params = [] }) {
-    const client = new Client({
-      connectionString: process.env.DATABASE_URL
-    });
-    
-    await client.connect();
-    const result = await client.query(sql, params);
-    await client.end();
-    
-    return result.rows;
+```yaml
+# config.yaml
+integrations:
+  github:
+    token:
+      secretRef: GITHUB_TOKEN
+    # Fallback to direct value (not recommended)
+    # token: "ghp_xxx"
+```
+
+### Pattern 3: Multiple Integrations
+
+Configure several at once:
+
+```yaml
+# config.yaml
+models:
+  providers:
+    anthropic:
+      apiKey: { secretRef: ANTHROPIC_API_KEY }
+    openai:
+      apiKey: { secretRef: OPENAI_API_KEY }
+
+integrations:
+  github: { token: { secretRef: GITHUB_TOKEN } }
+  calendar: { password: { secretRef: CALENDAR_PASSWORD } }
+  email: { 
+    imap: { user: "you@gmail.com", pass: { secretRef: EMAIL_PASSWORD } },
+    smtp: { user: "you@gmail.com", pass: { secretRef: EMAIL_PASSWORD } }
   }
-};
 ```
 
 ---
 
-## Common Mistakes and Troubleshooting
+## Testing Your Integrations
 
-| Problem | Solution |
+### Test GitHub
+```bash
+gh auth status
+gh repo list
+```
+
+### Test Calendar
+```bash
+khal list today
+```
+
+### Test Email
+```bash
+# Use openclaw to test
+openclaw config get tools.email.imap.user
+```
+
+---
+
+## Common Configuration Mistakes
+
+| Mistake | Solution |
 |---------|----------|
-| "skill not found" | Use `openclaw skills` (plural), not `openclaw skill` |
-| 401 Unauthorized | Check API tokens; verify scopes/permissions |
-| Rate limiting | Add delays; use caching; upgrade plan |
-| Connection timeout | Check firewall; verify endpoint URLs |
-| Skill not appearing | Run `openclaw skills check` to verify installation |
-| Credentials exposed | Use SecretRef instead of plain text in config |
+| Token in plain text config | Use `secretRef` instead |
+| Wrong env var name | Check `openclaw config get <key>` |
+| Missing `export` in .bashrc | Ensure vars are exported, not just set |
+| API key without proper scopes | Verify token has required permissions |
+| Credentials in git repo | Add to `.gitignore`, use env vars |
 
 ---
 
-## Advanced Patterns
+## Security Best Practices
 
-### Integration Chaining
-
-Combine multiple skills in one workflow:
-
-```javascript
-// Skill that combines multiple integrations
-module.exports = {
-  async morningBriefing() {
-    const weather = await skills.weather.getCurrent();
-    const events = await skills.calendar.getToday();
-    const prs = await skills.github.getReviewRequests();
-    
-    return {
-      weather,
-      calendar: events,
-      github: prs
-    };
-  }
-};
-```
-
-### Error Handling Wrapper
-
-```javascript
-// Robust integration call
-async function safeIntegrationCall(fn, fallback) {
-  try {
-    return await fn();
-  } catch (error) {
-    console.error('Integration error:', error.message);
-    return fallback;
-  }
-}
-```
+1. **Never commit credentials** - Always use env vars or SecretRef
+2. **Use app passwords** - For email/calendar, not your main password
+3. **Rotate tokens regularly** - Set calendar reminders to rotate API keys
+4. **Scope tokens narrowly** - GitHub tokens should have minimal permissions
+5. **Check `openclaw security audit`** - Run regularly to find exposed credentials
 
 ---
 
 ## Related Modules and Next Steps
 
-- Previous: [04-skills](../04-skills/)
-- Next: [06-automation](../06-automation/)
-- Reference: [ClawHub](https://clawhub.ai)
-- Command Reference: `openclaw skills --help`
+- Previous: [04-skills](../04-skills/) - How to install and use skills
+- Next: [06-automation](../06-automation/) - Automating with cron
+- Security: [09-security-and-ops](../09-security-and-ops/) - Production security
+- Reference: `openclaw config --help`
 
 ---
 
-**Time to complete:** 45 minutes  
+**Time to complete:** 30 minutes  
 **Prerequisites:** [04-skills](../04-skills/)  
-**Outcome:** Connected to external services via verified ClawHub skills
+**Outcome:** External services connected via secure configuration
