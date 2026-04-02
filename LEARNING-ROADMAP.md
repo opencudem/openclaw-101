@@ -30,6 +30,7 @@
 | 05-integrations | Linear integration guide | 📝 Planned |
 | 07-browser | Form automation patterns | 📝 Planned |
 | 08-workflows | 5 more flagship workflows | 📝 Planned |
+| 11-creating-agents | Creating additional agents guide | ✅ **DONE** |
 
 ### Examples to Add
 
@@ -89,4 +90,6 @@ We're focusing on:
 
 ---
 
-Last updated: 2026-03-31
+**Module 11 Added:** How to create your second agent (2026-04-02)
+
+Last updated: 2026-04-02
