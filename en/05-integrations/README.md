@@ -13,6 +13,8 @@ Integrations allow OpenClaw to interact with your external services - GitHub rep
 - You want to send/receive emails
 - You need database connections
 - You want API integrations (Slack, Notion, etc.)
+- **You need to configure xAI/Grok web search (v2026.4.2+)** ← New
+- **You're migrating from pre-v2026.4.2 configs** ← New
 
 ## How Integrations Work
 
@@ -278,6 +280,98 @@ integrations:
     imap: { user: "you@gmail.com", pass: { secretRef: EMAIL_PASSWORD } },
     smtp: { user: "you@gmail.com", pass: { secretRef: EMAIL_PASSWORD } }
   }
+```
+
+---
+
+## xAI (Grok) Web Search Integration (v2026.4.2+)
+
+> ⚠️ **Breaking Change in v2026.4.2:** xAI configuration moved from core to plugin-owned paths.
+
+### What's New
+Starting with OpenClaw v2026.4.2, xAI/Grok web search configuration uses a **plugin-owned path** instead of the legacy core configuration. This change standardizes how plugins manage their own settings.
+
+### Configuration (New Way)
+
+```yaml
+# ~/.openclaw/config.yaml
+plugins:
+  entries:
+    xai:
+      enabled: true
+      config:
+        webSearch:
+          apiKey: { secretRef: XAI_API_KEY }
+          # or direct: apiKey: "xai-your-key"
+```
+
+Or in `openclaw.json`:
+```json
+{
+  "plugins": {
+    "entries": {
+      "xai": {
+        "enabled": true,
+        "config": {
+          "webSearch": {
+            "apiKey": { "secretRef": "XAI_API_KEY" }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Migration from Pre-v2026.4.2
+
+If you have existing xAI configuration using the legacy path:
+
+**Old (deprecated):**
+```yaml
+# DON'T USE THIS ANYMORE
+tools:
+  web:
+    x_search:
+      enabled: true
+      apiKey: "xai-old-key"
+```
+
+**Migrate automatically:**
+```bash
+openclaw doctor --fix
+```
+
+This command will:
+1. Detect legacy `tools.web.x_search.*` paths
+2. Move values to new `plugins.entries.xai.config.xSearch.*` paths
+3. Update authentication to use `XAI_API_KEY` env var
+
+### Firecrawl Migration (Also Required)
+
+Firecrawl configuration also moved in v2026.4.2:
+
+| Legacy Path | New Path |
+|-------------|----------|
+| `tools.web.fetch.firecrawl.*` | `plugins.entries.firecrawl.config.webFetch.*` |
+
+**Same migration command applies:**
+```bash
+openclaw doctor --fix
+```
+
+### Verification
+
+Test your migration:
+```bash
+# Check xAI config
+openclaw config get plugins.entries.xai.config.webSearch.apiKey
+
+# Test web search
+openclaw web search "test query"
+
+# Check for issues
+openclaw doctor
 ```
 
 ---
