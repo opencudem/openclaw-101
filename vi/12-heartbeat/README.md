@@ -231,6 +231,104 @@ heartbeat: {
 
 **Mẹo:** Batch các kiểm tra periodic tương tự vào `HEARTBEAT.md` thay vì tạo nhiều cron jobs.
 
+## Per-Agent Heartbeats
+
+Nếu bất kỳ `agents.list[]` nào có block `heartbeat`, **chỉ các agent đó** chạy heartbeats:
+
+```json5
+{
+  agents: {
+    defaults: {
+      heartbeat: { every: "30m", target: "last" },  // Shared defaults
+    },
+    list: [
+      { id: "main" },                              // Không heartbeat
+      {
+        id: "docloop",
+        heartbeat: {                               // Chạy heartbeats
+          every: "1h",
+          target: "discord",
+          accountId: "docloop",
+        }
+      },
+    ],
+  },
+}
+```
+
+Per-agent block merge trên defaults.
+
+## Ví dụ Thực tế: DocLoop
+
+```json5
+{
+  agents: {
+    list: [
+      {
+        id: "docloop",
+        name: "DocLoop",
+        workspace: "~/.openclaw/workspace-docloop",
+        heartbeat: {
+          every: "30m",
+          target: "discord",
+          accountId: "docloop",
+          to: "1488561209300095230",
+          lightContext: true,
+          isolatedSession: true,
+          prompt: "Read HEARTBEAT.md if it exists. Follow the DocLoop 6-Phase Workflow strictly. Do not infer tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+        },
+      },
+    ],
+  },
+}
+```
+
+**HEARTBEAT.md:**
+```markdown
+# DocLoop Documentation Maintenance
+
+## 6-Phase Checklist
+- [ ] PHASE 1: Scan for new releases, skills, use cases
+- [ ] PHASE 2: Audit gaps against existing docs
+- [ ] PHASE 3: Research authoritative sources
+- [ ] PHASE 4: Create/update documentation
+- [ ] PHASE 5: Validate (keep-or-discard gate)
+- [ ] PHASE 6: Commit & report
+
+## Rules
+1. Official docs = ground truth only — NO invention
+2. Never push to main — always PR
+3. Failed validation → PENDING_REVIEW.md
+```
+
+## Manual Wake (Testing)
+
+Kích hoạt heartbeat ngay lập tức:
+
+```bash
+# Immediate wake
+openclaw system event --text "Check for urgent follow-ups" --mode now
+
+# Next scheduled tick
+openclaw system event --text "Check for urgent follow-ups" --mode next-heartbeat
+```
+
+Nếu nhiều agents có `heartbeat` được cấu hình, manual wake chạy tất cả.
+
+## Heartbeat vs Cron: Khi nào Dùng Cái nào
+
+| Use Case | Heartbeat | Cron |
+|----------|-----------|------|
+| Nhiều kiểm tra batched | ✅ Yes | ❌ No (một task mỗi cron) |
+| Cần conversational context | ✅ Yes | ❌ No (isolated) |
+| Thời gian có thể drift (~30 min) | ✅ Yes | ❌ Cần chính xác |
+| Lịch trình chính xác yêu cầu | ❌ No | ✅ Yes |
+| One-shot reminders | ❌ No | ✅ Yes |
+| Model/thinking level khác | ❌ No | ✅ Yes |
+| Gửi không qua main session | ❌ No | ✅ Yes |
+
+**Mẹo:** Batch các kiểm tra periodic tương tự vào `HEARTBEAT.md` thay vì tạo nhiều cron jobs.
+
 ## Module Liên quan
 
 - Trước đó: [11-creating-agents](../11-creating-agents/)
@@ -242,3 +340,6 @@ heartbeat: {
 **Thời gian hoàn thành:** 15 phút
 **Yêu cầu trước:** Gateway đang hoạt động, một channel được cấu hình
 **Kết quả:** Agent check-in chủ động cho bảo trì và cảnh báo
+
+**Status:** ✅ VALIDATED — Phase 5 Complete
+**DocLoop Phase:** 6 Ready (Commit & Report)
