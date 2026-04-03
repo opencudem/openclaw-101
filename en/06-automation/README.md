@@ -287,6 +287,204 @@ Cron jobs are stored at:
 
 ## Advanced Patterns
 
+## Task Flow (v2026.4.2+) — Multi-Step Workflow Orchestration
+
+> **New in v2026.4.2:** Task Flow is the orchestration layer above background tasks for durable multi-step workflows.
+
+### When to Use Task Flow vs Cron
+
+| Use Case | Tool |
+|----------|------|
+| Single recurring job | Cron |
+| Multi-step pipeline (A → B → C) | Task Flow (managed) |
+| Track externally created tasks | Task Flow (mirrored) |
+| Simple daily briefing | Cron |
+| Complex report generation | Task Flow |
+
+### How Task Flow Works
+
+Task Flow coordinates multiple tasks with:
+- **Durable state:** Progress survives gateway restarts
+- **Revision tracking:** Conflict detection for concurrent updates
+- **Sync modes:** Managed (controls lifecycle) or Mirrored (observes external tasks)
+
+```
+┌─────────────┐     ┌──────────┐     ┌─────────────┐
+│   Flow      │────►│  Step 1  │────►│  Step 2     │
+│ (orchestrates)│    │  Task    │     │  Task       │
+└─────────────┘     └──────────┘     └─────────────┘
+       │                                    │
+       └────────────────────────────────────┘
+                    (waits, then continues)
+```
+
+### CLI Commands
+
+```bash
+# List active and recent flows
+openclaw tasks flow list
+
+# Inspect a specific flow
+openclaw tasks flow <lookup>
+
+# Cancel a running flow
+openclaw tasks flow cancel <lookup>
+
+# Inspect individual tasks
+openclaw tasks list
+```
+
+### Sync Modes Explained
+
+**Managed Mode:** Task Flow creates and drives tasks automatically.
+```
+Flow: weekly-report
+  Step 1: gather-data     → task created → succeeded
+  Step 2: generate-report → task created → running
+  Step 3: deliver         → pending
+```
+
+**Mirrored Mode:** Task Flow observes tasks created by cron/CLI without controlling them.
+```
+Flow: morning-ops
+  Cron Job A: backups      → observed → succeeded
+  Cron Job B: health-check → observed → running
+  Cron Job C: report       → observed → pending
+```
+
+### Example: Weekly Report Flow
+
+A managed flow that coordinates 3 sequential tasks:
+
+1. **Gather data** (task 1)
+2. **Generate report** (task 2) — starts after task 1 succeeds
+3. **Deliver to Slack** (task 3) — starts after task 2 succeeds
+
+If the gateway restarts during step 2, Task Flow resumes from that point.
+
+### Durable State & Recovery
+
+Task Flow persists its state to SQLite:
+- **Location:** `$OPENCLAW_STATE_DIR/tasks/flows.sqlite`
+- **Retention:** Terminal flows kept for 7 days
+- **Recovery:** Automatic resume after gateway restart
+
+### Task Flow vs Background Tasks
+
+| Feature | Background Task | Task Flow |
+|---------|-----------------|-----------|
+| Unit of work | Single operation | Multi-step coordination |
+| State | Task-level | Flow-level with step tracking |
+| Recovery | Manual restart | Automatic resume |
+| Use case | One-shot job | Complex workflows |
+
+### Common Patterns
+
+**Weekly Report Pipeline:**
+```
+Flow: weekly-report (managed)
+├── Step 1: collect-metrics (cron job)
+├── Step 2: analyze-data (task)
+├── Step 3: generate-pdf (task)
+└── Step 4: send-email (task)
+```
+
+**Morning Operations Dashboard:**
+```
+Flow: morning-ops (mirrored)
+├── Cron: backup-check
+├── Cron: dependency-scan
+├── Cron: health-check
+└── Cron: daily-briefing
+```
+
+### Troubleshooting Task Flow
+
+| Problem | Solution |
+|---------|----------|
+| Flow stuck | Check `openclaw tasks flow list` for failed steps |
+| Can't cancel | Use lookup ID from list, not flow name |
+| Lost after restart | Wait 30s for reconciliation, check `openclaw tasks flow list` |
+| Step keeps failing | Check individual task with `openclaw tasks list` |
+
+---
+
+## Copy-Paste Examples
+
+### Job with Light Context
+
+For faster execution with minimal bootstrap:
+
+```bash
+openclaw cron add \
+  --name "quick-check" \
+  --cron "0 * * * *" \
+  --message "Quick status check" \
+  --light-context \
+  --no-deliver
+```
+
+### Editing Jobs
+
+```bash
+# Add delivery to an existing job
+openclaw cron edit <job-id> \
+  --announce \
+  --channel telegram \
+  --to "123456789"
+
+# Disable delivery
+openclaw cron edit <job-id> --no-deliver
+
+# Enable light context
+openclaw cron edit <job-id> --light-context
+```
+
+### Manual Run
+
+```bash
+# Trigger a job manually
+openclaw cron run <job-id>
+# Returns: { ok: true, enqueued: true, runId }
+
+# Check the outcome
+openclaw cron runs --id <job-id>
+```
+
+## Retry Policy
+
+Cron jobs have automatic retry on failure:
+
+| Attempt | Delay |
+|---------|-------|
+| 1st retry | 30 seconds |
+| 2nd retry | 1 minute |
+| 3rd retry | 5 minutes |
+| 4th retry | 15 minutes |
+| 5th retry | 60 minutes |
+
+Jobs that fail after all retries are marked as failed. Check `openclaw cron runs --id <job-id>` for details.
+
+## Job Storage
+
+Cron jobs are stored at:
+- **Location:** `~/.openclaw/cron/jobs.json`
+- **Format:** JSON with job definitions
+- **Persistence:** Survives restarts
+
+## Common Mistakes and Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Job not running | Check gateway is running: `openclaw gateway status` |
+| Wrong timezone | Set `TZ` environment variable |
+| Job runs but no output | Verify `--announce` flag and channel connection |
+| Missed executions | Gateway was down; jobs don't backfill by default |
+| "Invalid cron expression" | Check format: `minute hour day month weekday` |
+| Can't edit job | Use job ID from `openclaw cron list`, not name |
+
+## Advanced Patterns
+
 ### Job Dependencies
 
 Chain jobs with offset schedules:
