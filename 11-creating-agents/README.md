@@ -129,35 +129,50 @@ openclaw agents list --bindings
 
 **Binding routes incoming messages to the agent, but each agent needs its own credentials to respond.**
 
-For **Discord** and other channels, create an `auth-profiles.json` file:
+For **multi-agent Discord setups**, add per-account tokens to your main config (`~/.openclaw/openclaw.json`):
 
-```bash
-# Create the auth profiles directory
-mkdir -p ~/.openclaw/agents/work/agent
-
-# Create the auth file
-cat > ~/.openclaw/agents/work/agent/auth-profiles.json << 'EOF'
+```json5
 {
-  "discord": {
-    "default": {
-      "botToken": "YOUR_WORK_BOT_TOKEN_HERE"
-    }
-  },
-  "slack": {
-    "default": {
-      "botToken": "xoxb-YOUR-WORK-SLACK-TOKEN"
+  channels: {
+    discord: {
+      enabled: true,
+      groupPolicy: "allowlist",
+      accounts: {
+        default: {
+          token: "MAIN_BOT_TOKEN_HERE",
+          guilds: {
+            "YOUR_GUILD_ID": {
+              users: ["YOUR_USER_ID"],
+              channels: {
+                "MAIN_CHANNEL_ID": { allow: true, requireMention: false }
+              }
+            }
+          }
+        },
+        work: {
+          token: "WORK_BOT_TOKEN_HERE",
+          guilds: {
+            "YOUR_GUILD_ID": {
+              channels: {
+                "WORK_CHANNEL_ID": { allow: true, requireMention: false }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
-EOF
 ```
 
 **⚠️ Critical:** Each agent needs its **own Discord bot** (separate application at https://discord.com/developers/applications). Sharing tokens between agents causes routing confusion.
 
-**Why this is needed:**
+**Why this structure is needed:**
 - Binding (`--bind`) = Routes **incoming** messages to the agent
-- Auth profiles = Allows agent to send **outgoing** responses
-- Without auth profiles, the agent cannot reply to the channel
+- Per-account `token` in main config = Allows agent to send **outgoing** responses
+- The main config's `channels.discord.accounts` takes precedence over per-agent auth profiles
+
+**For other channels** (Slack, Telegram, etc.), auth profiles may still work — check channel-specific docs.
 
 ### Step 5: Configure Identity
 
@@ -399,28 +414,35 @@ Document what each agent does:
 **Step 1: Check the binding exists**
 ```bash
 openclaw agents list --bindings
-# Should show: docloop → discord:YOUR_CHANNEL_ID
+# Should show: work → discord:work (account-based binding)
 ```
 
-**Step 2: Check auth-profiles.json exists**
+**Step 2: Verify main config has per-account token**
 ```bash
-ls ~/.openclaw/agents/docloop/agent/auth-profiles.json
-# If missing, the agent can't respond!
+cat ~/.openclaw/openclaw.json | grep -A5 '"work"'
+# Should show a "token" field under accounts.work
 ```
 
-**Step 3: Create auth-profiles.json**
-```bash
-mkdir -p ~/.openclaw/agents/docloop/agent
-cat > ~/.openclaw/agents/docloop/agent/auth-profiles.json << 'EOF'
+**Step 3: Add the per-account token to main config**
+
+The token must be in `~/.openclaw/openclaw.json` under `channels.discord.accounts.<accountId>.token`:
+
+```json5
 {
-  "discord": {
-    "default": {
-      "botToken": "YOUR_BOT_TOKEN_HERE"
+  channels: {
+    discord: {
+      accounts: {
+        work: {
+          token: "WORK_BOT_TOKEN_HERE",
+          guilds: { ... }
+        }
+      }
     }
   }
 }
-EOF
 ```
+
+**⚠️ Note:** Per-agent `auth-profiles.json` does NOT work for Discord — the main config's `channels.discord.accounts` takes precedence.
 
 **Step 4: Get a separate Discord bot token**
 - Go to https://discord.com/developers/applications
@@ -436,8 +458,9 @@ openclaw gateway restart
 
 **Why this happens:**
 - **Binding** (`--bind`) = Routes **incoming** messages to agent ✅
-- **Auth profiles** = Allows **outgoing** responses ❌ (often forgotten!)
+- **Per-account token in main config** = Allows **outgoing** responses ❌ (often forgotten!)
 - Each agent needs its **own bot token** to send messages
+- Main config takes precedence over per-agent auth profiles for Discord
 
 ## CLI Reference
 

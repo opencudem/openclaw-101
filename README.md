@@ -51,7 +51,8 @@ openclaw channel add telegram
 |-------|---------|------|------|
 | 🌱 Beginner | 01-03 | 2-3 hours | Get OpenClaw running with your favorite chat app |
 | 🌿 Intermediate | 04-06 | 4-6 hours | Teach it skills and automate daily tasks |
-| 🌳 Advanced | 07-10 | 6-8 hours | Build complex workflows and multi-agent systems |
+| 🌳 Advanced | 07-11 | 6-8 hours | Build complex workflows and multi-agent systems |
+| 🔧 Maintenance | 12 | Ongoing | Proactive monitoring and documentation updates |
 
 **Weekend goal:** Complete Beginner + Intermediate for immediate daily value.
 
@@ -69,6 +70,8 @@ openclaw channel add telegram
 | [08-workflows](08-workflows/) | Combining everything into real systems | 90 min |
 | [09-security-and-ops](09-security-and-ops/) | Approvals, permissions, reliability | 45 min |
 | [10-cli-and-reference](10-cli-and-reference/) | Complete command reference | 30 min |
+| [11-creating-agents](11-creating-agents/) | Multi-agent architecture and routing | 45 min |
+| [12-heartbeat](12-heartbeat/) | Proactive automation and maintenance | 15 min |
 
 ## Flagship Workflows
 
