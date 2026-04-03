@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-7289DA?logo=discord)](https://discord.com/invite/clawd)
 
-**Trạng thái bản dịch:** 🚧 Đang thực hiện (3/12 module)
+**Trạng thái bản dịch:** 🚧 Đang thực hiện (5/12 module)
 
 ---
 
