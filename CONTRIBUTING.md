@@ -8,7 +8,7 @@ Thank you for your interest in contributing! This guide helps you get started.
 - **Add modules** - Deep dives on specific topics
 - **Create workflows** - Real-world examples
 - **Improve examples** - Better code, clearer explanations
-- **Translate** - Make it accessible in more languages
+- **Translate** - Make it accessible in more languages ([see TRANSLATION.md](TRANSLATION.md))
 
 ## Getting Started
 

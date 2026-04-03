@@ -119,7 +119,7 @@ my-skill/
     └── api-docs.md
 ```
 
-See [04-skills](../04-skills/) for the full guide.
+See [04-skills](04-skills/) for the full guide.
 
 ## Submit to ClawHub
 
