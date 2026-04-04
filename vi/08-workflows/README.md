@@ -287,6 +287,135 @@ openclaw cron add \
   --to "admin-user-id"
 ```
 
+## Phân Tích Tài Liệu PDF (v2026.3.2+)
+
+> Xử lý PDF native với Anthropic/Google providers, fallback extraction cho các providers khác.
+
+### Giải quyết gì
+
+Tool `pdf` phân tích tài liệu PDF và trích xuất text mà không cần OCR pipelines phức tạp. Xử lý:
+- **Research papers** — Trích xuất findings và summaries
+- **Hóa đơn/biên lai** — Parse số tiền và ngày tháng
+- **Báo cáo** — Generate executive summaries
+- **Hợp đồng** — Xác định các điều khoản chính
+- **So sánh multi-document** — So sánh các phiên bản cạnh nhau
+
+### Hỗ trợ Provider
+
+| Provider | Mode | Ghi chú |
+|----------|------|---------|
+| **Anthropic** | Native | Gửi raw PDF bytes qua DocumentBlockParam |
+| **Google** | Native | Gửi raw PDF qua inlineData với MIME application/pdf |
+| **OpenAI/Khác** | Fallback | Trích xuất text qua pdfjs-dist, images qua @napi-rs/canvas |
+
+### Cấu hình
+
+Thêm vào `openclaw.json`:
+
+```json5
+{
+  agents: {
+    defaults: {
+      pdfModel: {
+        primary: "anthropic/claude-opus-4-6",
+        fallbacks: ["openai/gpt-5-mini"],
+      },
+      pdfMaxBytesMb: 10,
+      pdfMaxPages: 20,
+    },
+  },
+}
+```
+
+**Tùy chọn cấu hình:**
+- `pdfModel` — Model phân tích PDF (fallback đến `imageModel` nếu không set)
+- `pdfMaxBytesMb` — Giới hạn size mỗi PDF (mặc định: 10)
+- `pdfMaxPages` — Số trang tối đa trích xuất (mặc định: 20)
+
+### Ví dụ Sử dụng
+
+**Phân tích một PDF:**
+```json
+{
+  "pdf": "/home/reports/q1-2026.pdf",
+  "prompt": "Summarize revenue trends and key metrics in 5 bullets"
+}
+```
+
+**So sánh nhiều PDF:**
+```json
+{
+  "pdfs": ["/home/proposals/v1.pdf", "/home/proposals/v2.pdf"],
+  "prompt": "Compare pricing and timeline changes between versions"
+}
+```
+
+**Trích xuất trang cụ thể (chỉ fallback mode):**
+```json
+{
+  "pdf": "https://example.com/contract.pdf",
+  "pages": "1-3,7",
+  "prompt": "Extract all payment terms and deadlines"
+}
+```
+
+**Qua chat:**
+```
+User: Đọc /home/invoices/march.pdf và cho tôi biết tổng số tiền
+Agent: Hóa đơn từ Acme Corp ngày March 1, 2026 có tổng 
+       $4,750.00 — $3,500 cho dịch vụ consulting và $1,250 
+       cho software licenses.
+```
+
+### Tham số Input
+
+| Tham số | Type | Mô tả |
+|---------|------|-------|
+| `pdf` | `string` | Đường dẫn hoặc URL PDF đơn |
+| `pdfs` | `string[]` | Nhiều PDFs (tối đa 10) |
+| `prompt` | `string` | Prompt phân tích (mặc định: "Analyze this PDF document.") |
+| `pages` | `string` | Lọc trang: "1-5", "1,3,7-9" (chỉ fallback mode) |
+| `model` | `string` | Ghi đè model: "provider/model" |
+| `maxBytesMb` | `number` | Giới hạn size mỗi PDF (MB) |
+
+### Các Mode Thực thi
+
+**Native mode** (Anthropic/Google):
+- Gửi raw PDF bytes trực tiếp đến provider APIs
+- Tham số `pages` KHÔNG được hỗ trợ (trả về lỗi nếu dùng)
+- Nhanh nhất, chính xác nhất
+
+**Fallback mode** (Các providers khác):
+1. Trích xuất text từ các trang đã chọn (tối đa `pdfMaxPages`)
+2. Nếu text trích xuất < 200 chars, render trang thành PNG và include như images
+3. Gửi combined content đến model
+
+### Tích hợp Workflow
+
+**Xử lý báo cáo hàng ngày:**
+```bash
+openclaw cron add \
+  --name "process-reports" \
+  --cron "0 9 * * *" \
+  --message "Đọc /home/reports/daily.pdf và post summary lên Slack" \
+  --announce \
+  --channel slack \
+  --to "#reports"
+```
+
+**Research workflow với nguồn PDF:**
+```
+Trigger: PDF mới trong ~/downloads/
+Action: Trích xuất key findings → Thêm vào research-notes.md → Post summary
+```
+
+### Giới hạn
+
+- Tối đa 10 PDFs mỗi lần gọi
+- Native mode không hỗ trợ filter `pages`
+- Workspace-only file policy có thể từ chối đường dẫn ngoài allowed roots
+- Cần `pdfjs-dist` và `@napi-rs/canvas` cho fallback mode
+
 ## Module liên quan và bước tiếp
 
 - Trước đó: [07-browser-automation](../07-browser-automation/)
