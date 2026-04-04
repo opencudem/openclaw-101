@@ -20,7 +20,7 @@ OpenClaw's defining feature is meeting you where you are. This module shows you 
 | **Discord** | Team collaboration, communities | 🟢 Easy |
 | **WhatsApp** | Personal use, existing contacts | 🟡 Medium |
 | **Slack** | Workplace integration | 🟡 Medium |
-| **iMessage** | Apple ecosystem | 🟡 Medium |
+| **iMessage** | Apple ecosystem | 🟡 Medium | [BlueBubbles Guide →](./bluebubbles-guide/) |
 | **Signal** | Privacy-focused users | 🟡 Medium |
 
 ## Channel Commands Overview
