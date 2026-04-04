@@ -121,6 +121,36 @@ my-skill/
 
 See [04-skills](04-skills/) for the full guide.
 
+## Community Resources
+
+Beyond the official registry, the OpenClaw community maintains curated collections of skills and agents:
+
+### Skill Collections
+
+| Repository | Description | Count |
+|------------|-------------|-------|
+| [sundial-org/awesome-openclaw-skills](https://github.com/sundial-org/awesome-openclaw-skills) | Curated skills registry | 913+ |
+| [LeoYeAI/openclaw-master-skills](https://github.com/LeoYeAI/openclaw-master-skills) | Weekly updated skill collection | 339+ |
+| [STPDevteam/AWEsome-Multi-Agents-Skills](https://github.com/STPDevteam/AWEsome-Multi-Agents-Skills) | Multi-agent specific skills | Various |
+| [EthanYolo01/Awesome-OpenClaw](https://github.com/EthanYolo01/Awesome-OpenClaw) | General resources and skills | Curated |
+
+### Agent Templates
+
+| Repository | Description | Count |
+|------------|-------------|-------|
+| [mergisi/awesome-openclaw-agents](https://github.com/mergisi/awesome-openclaw-agents) | Production-ready agent templates | 187 |
+| [hesamsheikh/awesome-openclaw-usecases](https://github.com/hesamsheikh/awesome-openclaw-usecases) | Real-world use case implementations | Various |
+
+### Quick Install from Community
+
+```bash
+# Install from awesome-openclaw-skills registry
+openclaw skill install github:sundial-org/awesome-openclaw-skills#skill-name
+
+# Browse all 13,000+ community skills
+openclaw skills search --source community "keyword"
+```
+
 ## Submit to ClawHub
 
 Share your skills with the community:
@@ -128,7 +158,8 @@ Share your skills with the community:
 1. Publish to npm: `npm publish`
 2. Submit to [ClawHub](https://clawhub.ai)
 3. Tag appropriately for discovery
+4. Add to [awesome-openclaw-skills](https://github.com/sundial-org/awesome-openclaw-skills) for visibility
 
 ---
 
-Last updated: 2026-03-31
+Last updated: 2026-04-04
