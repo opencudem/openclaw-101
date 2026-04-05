@@ -13,6 +13,7 @@ Tích hợp cho phép OpenClaw tương tác với dịch vụ bên ngoài của 
 - Bạn muốn gửi/nhận email
 - Bạn cần kết nối database
 - Bạn muốn tích hợp API (Slack, Notion, v.v.)
+- **Bạn đang migrate từ config pre-v2026.4.2** → Xem [Hướng dẫn Migration](./migrating-to-v2026.4.2.md)
 
 ## Cách Tích hợp Hoạt động
 
