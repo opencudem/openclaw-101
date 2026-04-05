@@ -14,7 +14,7 @@ Integrations allow OpenClaw to interact with your external services - GitHub rep
 - You need database connections
 - You want API integrations (Slack, Notion, etc.)
 - **You need to configure xAI/Grok web search (v2026.4.2+)** ← New
-- **You're migrating from pre-v2026.4.2 configs** ← New
+- **You're migrating from pre-v2026.4.2 configs** → See [Migration Guide](./migrating-to-v2026.4.2.md)
 
 ## How Integrations Work
 

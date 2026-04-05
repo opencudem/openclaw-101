@@ -287,6 +287,135 @@ openclaw cron add \
   --to "admin-user-id"
 ```
 
+## PDF Document Analysis (v2026.3.2+)
+
+> Native PDF processing with Anthropic/Google providers, extraction fallback for others.
+
+### What it solves
+
+The `pdf` tool analyzes PDF documents and extracts text without complex OCR pipelines. It handles:
+- **Research papers** — Extract findings and summaries
+- **Invoices/receipts** — Parse amounts and dates
+- **Reports** — Generate executive summaries
+- **Contracts** — Identify key terms and clauses
+- **Multi-document comparison** — Compare versions side-by-side
+
+### Provider Support
+
+| Provider | Mode | Notes |
+|----------|------|-------|
+| **Anthropic** | Native | Sends raw PDF bytes via DocumentBlockParam |
+| **Google** | Native | Sends raw PDF via inlineData with application/pdf MIME |
+| **OpenAI/Others** | Fallback | Text extraction via pdfjs-dist, images via @napi-rs/canvas |
+
+### Configuration
+
+Add to your `openclaw.json`:
+
+```json5
+{
+  agents: {
+    defaults: {
+      pdfModel: {
+        primary: "anthropic/claude-opus-4-6",
+        fallbacks: ["openai/gpt-5-mini"],
+      },
+      pdfMaxBytesMb: 10,
+      pdfMaxPages: 20,
+    },
+  },
+}
+```
+
+**Config options:**
+- `pdfModel` — Model for PDF analysis (falls back to `imageModel` if not set)
+- `pdfMaxBytesMb` — Per-PDF size limit (default: 10)
+- `pdfMaxPages` — Max pages to extract (default: 20)
+
+### Usage Examples
+
+**Single PDF analysis:**
+```json
+{
+  "pdf": "/home/reports/q1-2026.pdf",
+  "prompt": "Summarize revenue trends and key metrics in 5 bullets"
+}
+```
+
+**Multiple PDF comparison:**
+```json
+{
+  "pdfs": ["/home/proposals/v1.pdf", "/home/proposals/v2.pdf"],
+  "prompt": "Compare pricing and timeline changes between versions"
+}
+```
+
+**Page-specific extraction (fallback mode only):**
+```json
+{
+  "pdf": "https://example.com/contract.pdf",
+  "pages": "1-3,7",
+  "prompt": "Extract all payment terms and deadlines"
+}
+```
+
+**Via chat:**
+```
+User: Read /home/invoices/march.pdf and tell me the total amount
+Agent: The invoice from Acme Corp dated March 1, 2026 shows a total 
+       of $4,750.00 — $3,500 for consulting services and $1,250 
+       for software licenses.
+```
+
+### Input Reference
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pdf` | `string` | Single PDF path or URL |
+| `pdfs` | `string[]` | Multiple PDFs (max 10 total) |
+| `prompt` | `string` | Analysis prompt (default: "Analyze this PDF document.") |
+| `pages` | `string` | Page filter: "1-5", "1,3,7-9" (fallback mode only) |
+| `model` | `string` | Override model: "provider/model" |
+| `maxBytesMb` | `number` | Per-PDF size cap in MB |
+
+### Execution Modes
+
+**Native mode** (Anthropic/Google):
+- Sends raw PDF bytes directly to provider APIs
+- `pages` parameter NOT supported (returns error if used)
+- Fastest, most accurate
+
+**Fallback mode** (Other providers):
+1. Extract text from selected pages (up to `pdfMaxPages`)
+2. If extracted text < 200 chars, render pages to PNG and include as images
+3. Send combined content to model
+
+### Workflow Integration
+
+**Daily report processing:**
+```bash
+openclaw cron add \
+  --name "process-reports" \
+  --cron "0 9 * * *" \
+  --message "Read /home/reports/daily.pdf and post summary to Slack" \
+  --announce \
+  --channel slack \
+  --to "#reports"
+```
+
+**Research workflow with PDF sources:**
+```
+Trigger: New PDF in ~/downloads/
+Action: Extract key findings → Add to research-notes.md → Post summary
+```
+
+### Limitations
+
+- Max 10 PDFs per call
+- Native mode doesn't support `pages` filter
+- Workspace-only file policy may reject paths outside allowed roots
+- Requires `pdfjs-dist` and `@napi-rs/canvas` for fallback mode
+
 ## Related modules and next step
 
 - Previous: [07-browser-automation](../07-browser-automation/)
