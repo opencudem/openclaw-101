@@ -211,6 +211,85 @@ openclaw memory search "postgres"
 openclaw memory search --query "what database did we choose"
 ```
 
+## Active Memory (v2026.4.10+)
+
+> Optional plugin that automatically surfaces relevant memory before each reply.
+
+### What it solves
+
+Standard memory is reactive — you have to explicitly ask the agent to search or remember. Active Memory gives the system one bounded chance to pull in relevant context *before* the main reply is generated, making conversations feel more natural and context-aware.
+
+### How it works
+
+1. Before the main agent generates a reply, a lightweight "memory sub-agent" runs
+2. This sub-agent queries your memory files for relevant context
+3. A brief summary (up to 220 chars by default) is injected into the conversation
+4. The main agent then generates its reply with this context already available
+
+### Configuration
+
+Add to `openclaw.json`:
+
+```json5
+{
+  plugins: {
+    entries: {
+      "active-memory": {
+        enabled: true,
+        config: {
+          enabled: true,
+          agents: ["main"],
+          allowedChatTypes: ["direct"],
+          modelFallbackPolicy: "default-remote",
+          queryMode: "recent",
+          promptStyle: "balanced",
+          timeoutMs: 15000,
+          maxSummaryChars: 220,
+          persistTranscripts: false,
+          logging: true,
+        },
+      },
+    },
+  },
+}
+```
+
+### Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `agents` | `["main"]` | Which agents get active memory |
+| `allowedChatTypes` | `["direct"]` | Session types (direct, group, thread) |
+| `queryMode` | `"recent"` | Which memory to query: `recent`, `relevant`, `hybrid` |
+| `promptStyle` | `"balanced"` | `concise`, `balanced`, or `detailed` summaries |
+| `timeoutMs` | `15000` | How long to wait for memory sub-agent |
+| `maxSummaryChars` | `220` | Maximum characters of context to inject |
+| `persistTranscripts` | `false` | Save memory sub-agent transcripts for debugging |
+| `logging` | `true` | Log memory queries for tuning |
+
+### Enable and test
+
+After adding config, restart:
+
+```bash
+openclaw gateway restart
+```
+
+Test in a conversation:
+
+```
+/verbose on
+```
+
+You'll see memory queries happening automatically before replies.
+
+### Best practices
+
+- Start with `logging: true` while tuning
+- Use `queryMode: "recent"` for short-term context, `"relevant"` for long-term
+- Keep `maxSummaryChars` under 300 to avoid token bloat
+- Target specific agents rather than wildcard `*`
+
 ## Common Mistakes and Troubleshooting
 
 | Problem | Solution |

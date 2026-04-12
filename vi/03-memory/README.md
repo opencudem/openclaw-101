@@ -211,6 +211,85 @@ openclaw memory search "postgres"
 openclaw memory search --query "chúng ta đã chọn database gì"
 ```
 
+## Active Memory (v2026.4.10+)
+
+> Plugin tùy chọn tự động đưa ra bộ nhớ liên quan trước mỗi câu trả lời.
+
+### Giải quyết gì
+
+Bộ nhớ thông thường là reactive — bạn phải yêu cầu agent tìm kiếm hoặc nhớ một cách rõ ràng. Active Memory cho hệ thống một cơ hội giới hạn để lấy ngữ cảnh liên quan *trước* khi câu trả lời chính được tạo, giúp các cuộc trò chuyện cảm thấy tự nhiên và nhận thức ngữ cảnh hơn.
+
+### Cách hoạt động
+
+1. Trước khi agent chính tạo câu trả lời, một "memory sub-agent" nhẹ chạy
+2. Sub-agent này truy vấn các file bộ nhớ của bạn để tìm ngữ cảnh liên quan
+3. Một bản tóm tắt ngắn (tối đa 220 ký tự theo mặc định) được chèn vào cuộc trò chuyện
+4. Agent chính sau đó tạo câu trả lời với ngữ cảnh này đã sẵn sàng
+
+### Cấu hình
+
+Thêm vào `openclaw.json`:
+
+```json5
+{
+  plugins: {
+    entries: {
+      "active-memory": {
+        enabled: true,
+        config: {
+          enabled: true,
+          agents: ["main"],
+          allowedChatTypes: ["direct"],
+          modelFallbackPolicy: "default-remote",
+          queryMode: "recent",
+          promptStyle: "balanced",
+          timeoutMs: 15000,
+          maxSummaryChars: 220,
+          persistTranscripts: false,
+          logging: true,
+        },
+      },
+    },
+  },
+}
+```
+
+### Tùy chọn cấu hình
+
+| Tùy chọn | Mặc định | Mô tả |
+|----------|----------|-------|
+| `agents` | `["main"]` | Agent nào nhận active memory |
+| `allowedChatTypes` | `["direct"]` | Loại session (direct, group, thread) |
+| `queryMode` | `"recent"` | Bộ nhớ nào để truy vấn: `recent`, `relevant`, `hybrid` |
+| `promptStyle` | `"balanced"` | Tóm tắt: `concise`, `balanced`, hoặc `detailed` |
+| `timeoutMs` | `15000` | Thời gian chờ memory sub-agent |
+| `maxSummaryChars` | `220` | Số ký tự tối đa của ngữ cảnh được chèn |
+| `persistTranscripts` | `false` | Lưu transcript của memory sub-agent để debug |
+| `logging` | `true` | Log các truy vấn bộ nhớ để tinh chỉnh |
+
+### Kích hoạt và kiểm tra
+
+Sau khi thêm cấu hình, khởi động lại:
+
+```bash
+openclaw gateway restart
+```
+
+Kiểm tra trong cuộc trò chuyện:
+
+```
+/verbose on
+```
+
+Bạn sẽ thấy các truy vấn bộ nhớ tự động xảy ra trước câu trả lời.
+
+### Thực hành tốt nhất
+
+- Bắt đầu với `logging: true` trong khi tinh chỉnh
+- Dùng `queryMode: "recent"` cho ngữ cảnh ngắn hạn, `"relevant"` cho dài hạn
+- Giữ `maxSummaryChars` dưới 300 để tránh token bloat
+- Nhắm đến các agent cụ thể thay vì wildcard `*`
+
 ## Lỗi thường gặp và xử lý
 
 | Vấn đề | Cách giải quyết |
