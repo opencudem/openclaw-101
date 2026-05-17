@@ -48,7 +48,8 @@ openclaw cron add \
 **Components:**
 - RSS trigger
 - Content generation with LLM
-- Social media skills (Twitter, LinkedIn)
+- TweetClaw for X/Twitter search, monitored tweets, reviewed posts/replies, and follower export
+- Social media skills for LinkedIn and other channels
 
 ### Multi-Agent Content Factory
 **What it does:** Parallel workers handle research, writing, and thumbnail generation.
@@ -88,6 +89,7 @@ openclaw cron add \
 
 **Components:**
 - Reddit skill for community monitoring
+- TweetClaw for X/Twitter tweet search, replies, user lookup, and follower export
 - Sentiment analysis
 - Structured report generation
 
@@ -266,10 +268,10 @@ The community consensus for starting:
 
 ## Related Modules
 
-- [06-automation](../06-automation/) — Cron and Task Flow setup
-- [07-browser-automation](../07-browser-automation/) — Research and scraping
-- [08-workflows](../08-workflows/) — Combining multiple features
-- [11-creating-agents](../11-creating-agents/) — Multi-agent systems
+- [06-automation](en/06-automation/) - Cron and Task Flow setup
+- [07-browser-automation](en/07-browser-automation/) - Research and scraping
+- [08-workflows](en/08-workflows/) - Combining multiple features
+- [11-creating-agents](en/11-creating-agents/) - Multi-agent systems
 
 ---
 

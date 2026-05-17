@@ -47,6 +47,12 @@
 | search | Web search | `openclaw skill install search` |
 | scraper | Data extraction | `openclaw skill install scraper` |
 
+### 📣 Social & Public Web
+
+| Integration | Description | Install |
+|-------------|-------------|---------|
+| [TweetClaw](https://github.com/Xquik-dev/tweetclaw) | Search tweets, search replies, post reviewed tweets, export followers, monitor X/Twitter, and run giveaway draws through Xquik | `openclaw plugins install @xquik/tweetclaw` |
+
 ### 🗄️ Data
 
 | Skill | Description | Install |

@@ -41,7 +41,7 @@
 |------|---------|----------|
 | **Web research** | 07-browser-automation | [Research Agent](examples/research-and-content/research-agent.md) |
 | **Content curation** | 07-browser-automation, 03-memory | Auto-collect + summarize |
-| **Social media** | 05-integrations | Scheduled posts |
+| **Social media** | 05-integrations, 04-skills | Scheduled posts, X/Twitter search, reviewed replies |
 | **News monitoring** | 06-automation | Daily news digest |
 | **Competitor tracking** | 07-browser-automation | Price/feature monitoring |
 
